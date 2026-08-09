@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/screen_bg">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="58dp"
+        android:background="@color/brand_primary"
+        android:paddingLeft="6dp"
+        android:paddingRight="10dp">
+
+        <ImageView
+            android:id="@+id/btnBack"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_centerVertical="true"
+            android:padding="10dp"
+            android:src="@drawable/ic_back" />
+
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_toRightOf="@id/btnBack"
+            android:layout_marginLeft="8dp"
+            android:text="Screen"
+            android:textColor="#FFFFFFFF"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+    </RelativeLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="false">
+
+        <LinearLayout
+            android:id="@+id/content"
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="16dp" />
+    </ScrollView>
+
+    <FrameLayout
+        android:id="@+id/bottomBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+</LinearLayout>
