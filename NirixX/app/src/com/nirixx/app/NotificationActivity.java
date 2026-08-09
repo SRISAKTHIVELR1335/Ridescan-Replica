@@ -8,7 +8,7 @@ import android.widget.TextView;
 public class NotificationActivity extends BaseActivity {
     private static final String[][] NOTIFS = {
         {"VCI Firmware Updates Available!", "Version 2.19.1 is available for your TZ VCI and NRX Pro devices.", "2h ago", "true"},
-        {"App Update — NirixX 1.3.2", "Adds Raider 125 ISG flash support and U796 cluster coverage.", "Yesterday", "true"},
+        {"App Update — NirixX 1.3.3", "Adds Raider 125 ISG flash support and U796 cluster coverage.", "Yesterday", "true"},
         {"New flash files released", "U732 TFT cluster images (RLCD & TFT) pushed to flash_variant config.", "Mon", "false"},
         {"Scheduled DMS maintenance", "DMS sync will be unavailable Sun 01:00–03:00 IST.", "Sun", "false"},
     };

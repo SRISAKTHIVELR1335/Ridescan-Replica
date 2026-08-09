@@ -30,13 +30,13 @@ $AAPT2 link \
   -A "$APP/assets" \
   --min-sdk-version 24 \
   --target-sdk-version 34 \
-  --version-code 6 \
-  --version-name "1.3.2" \
+  --version-code 7 \
+  --version-name "1.3.3" \
   "$OUT/compiled/res.zip"
 
 echo "== [3/6] javac (ecj) =="
 find "$OUT/gen" "$APP/src" -name "*.java" > "$OUT/sources.txt"
-$JAVA -jar "$ECJ" -1.8 -nowarn \
+$JAVA -jar "$ECJ" -1.7 -nowarn \
   -bootclasspath "$ANDROID_JAR" -classpath "$ANDROID_JAR" \
   -d "$OUT/classes" @"$OUT/sources.txt"
 

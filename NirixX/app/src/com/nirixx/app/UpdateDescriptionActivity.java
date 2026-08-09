@@ -10,7 +10,7 @@ public class UpdateDescriptionActivity extends BaseActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_screen);
-        setTitle("What's New in 1.3.2");
+        setTitle("What's New in 1.3.3");
         wireBack();
         LinearLayout content = (LinearLayout) findViewById(R.id.content);
 
@@ -30,7 +30,7 @@ public class UpdateDescriptionActivity extends BaseActivity {
         LinearLayout.LayoutParams hp = new LinearLayout.LayoutParams(-1, -2);
         hp.setMargins(0, 0, 0, Ui.dp(this, 12));
         content.addView(head, hp);
-        head.addView(Ui.tv(this, "NirixX 1.3.2", 18f, 0xFFFFFFFF, true));
+        head.addView(Ui.tv(this, "NirixX 1.3.3", 18f, 0xFFFFFFFF, true));
         head.addView(Ui.tv(this, "Recommended update · 21.4 MB · Distributed via DMS",
                 12.5f, 0xB3FFFFFF, false));
 

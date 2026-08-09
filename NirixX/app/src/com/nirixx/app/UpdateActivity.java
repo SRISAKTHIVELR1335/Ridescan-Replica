@@ -34,7 +34,7 @@ public class UpdateActivity extends BaseActivity {
         content.addView(art, ap);
 
         LinearLayout card = Ui.card(this);
-        card.addView(Ui.tv(this, "NirixX 1.3.2", 17f, 0xFF141B2E, true));
+        card.addView(Ui.tv(this, "NirixX 1.3.3", 17f, 0xFF141B2E, true));
         card.addView(Ui.tv(this, "nirixx.io/updates/nirixx-1.3.0.apk", 12f, 0xFF5A6472, false));
         state = Ui.tv(this, "Downloading File...", 13.5f, 0xFF0B8376, true);
         state.setPadding(0, Ui.dp(this, 14), 0, 0);
