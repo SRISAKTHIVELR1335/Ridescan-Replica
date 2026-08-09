@@ -26,7 +26,7 @@ extra byte is real, on-screen content)
 |---|---|
 | Package | `com.nirixx.app` |
 | Label / tagline | **NirixX** · "Beyond Diagnostics" |
-| Version | `1.3.0` (versionCode 4) |
+| Version | `1.3.1` (versionCode 5) |
 | SDK window | **minSdk 24 (Android 7.0) → targetSdk 34 (Android 14)** |
 | Signature | own NirixX keystore, **APK Signature Scheme v2 + v3** |
 | Architecture | universal (pure Java, no native libs → all ABIs) |
@@ -81,10 +81,25 @@ The repo root holds the complete reverse-engineering analysis of the reference d
   adaptive launcher icon, display-cutout support, explicit `exported`, storage-permission caps,
   install-everywhere `uses-feature` flags (§7).
 
-### Phase 6 — Permission UX + self-check (commit `c17e700`, v1.3.0, **current**)
+### Phase 6 — Permission UX + self-check (commit `c17e700`, v1.3.0)
 - Bluetooth **rationale dialog** before the system prompt (demo-mode escape hatch).
 - **Auto-rescan** the instant access is granted (`onRequestPermissionsResult` → live scan).
 - **System Self-Check** screen: live green-tick device scoring with FIX deep-links (§8).
+
+### Phase 6.1 — Hotfix: launch crash + Play-safe profile (v1.3.1, **current**)
+- **Fixed the Android-14 launch crash** ("App Status Error. Install again" right after a
+  successful install): the session foreground service was typed `connectedDevice`, whose
+  runtime prerequisite — Bluetooth permissions *already granted* — cannot hold on a fresh
+  install, so `startForeground()` threw `SecurityException` and killed the process.
+  `ClientService` is now typed **`dataSync`** (no runtime prerequisites) with nested
+  fallbacks, and the `startService` call site is guarded. DEX confirmed format 035 → loads
+  on every API 24+ runtime.
+- **Play Protect profile cleaned:** removed `REQUEST_INSTALL_PACKAGES` and
+  `SYSTEM_ALERT_WINDOW` — the two classic sideload risk-triggers (only mock stubs used
+  them). The remaining "unknown developer" notice is inherent to *any* sideloaded APK not
+  distributed via Play and only clears by shipping through Play Console.
+- v1 (JAR) signing intentionally omitted: irrelevant at minSdk 24+ (Android 7.0 verifies v2
+  natively) and unsupported by the offline signer build.
 
 ---
 
@@ -170,7 +185,7 @@ The repo root holds the complete reverse-engineering analysis of the reference d
 ### 3.8 Services
 | Service | Purpose |
 |---|---|
-| `ClientService` | Foreground session notification (`connectedDevice`-typed FGS) |
+| `ClientService` | Foreground session notification (`dataSync`-typed FGS, crash-safe) |
 | `AppCloseService` | Session cleanup on task removal |
 | `OverlayService` | Overlay control stub |
 | `ScreenRecordOverlayService` | Recording-state flag for live-data capture |
@@ -250,14 +265,14 @@ the exact seam where a production UDS session layer (0x10/0x22/0x27/0x31/0x34–
 |---|---|
 | Android 12+ Bluetooth | `BLUETOOTH_SCAN` (`neverForLocation`) + `BLUETOOTH_CONNECT` at runtime via `Perms`; sim fallback when denied; API 29–30 gets legacy `ACCESS_FINE_LOCATION` |
 | Android 13+ notifications | `POST_NOTIFICATIONS` requested once at first Home launch |
-| Android 14+ FGS | `ClientService` typed `connectedDevice` + `FOREGROUND_SERVICE_CONNECTED_DEVICE`, typed `startForeground()` on API 29+ |
+| Android 14+ FGS | `ClientService` typed `dataSync` + `FOREGROUND_SERVICE_DATA_SYNC` (no runtime prerequisites — cannot crash a fresh install), typed `startForeground()` with fallbacks on API 29+ |
 | Manifest hygiene | explicit `exported` on every component, immutable `PendingIntent`, `RECEIVER_EXPORTED` on API 33+, `enableOnBackInvokedCallback` (predictive back), storage perms capped with `maxSdkVersion` |
 | Display | adaptive launcher icon, `shortEdges` display-cutout, themed status/nav bars |
 | Install surface | BT / BLE / Wi-Fi / camera all `required="false"` → installs on any phone or tablet; minSdk 24 ≈ 99% field coverage; universal ABI APK |
 
 ---
 
-## 8. Permission UX & System Self-Check (v1.3.0)
+## 8. Permission UX & System Self-Check (v1.3.x)
 
 **Pairing flow** — `AddDeviceActivity`
 1. Sim pool renders instantly (screen is never dead).

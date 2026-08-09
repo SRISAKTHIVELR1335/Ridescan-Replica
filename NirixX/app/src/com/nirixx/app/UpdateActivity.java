@@ -34,7 +34,7 @@ public class UpdateActivity extends BaseActivity {
         content.addView(art, ap);
 
         LinearLayout card = Ui.card(this);
-        card.addView(Ui.tv(this, "NirixX 1.3.0", 17f, 0xFF141B2E, true));
+        card.addView(Ui.tv(this, "NirixX 1.3.1", 17f, 0xFF141B2E, true));
         card.addView(Ui.tv(this, "nirixx.io/updates/nirixx-1.3.0.apk", 12f, 0xFF5A6472, false));
         state = Ui.tv(this, "Downloading File...", 13.5f, 0xFF0B8376, true);
         state.setPadding(0, Ui.dp(this, 14), 0, 0);
@@ -96,7 +96,7 @@ public class UpdateActivity extends BaseActivity {
                     action.setOnClickListener(new View.OnClickListener() {
                         public void onClick(View v) {
                             Ui.resultDialog(UpdateActivity.this, R.drawable.ic_flash_success,
-                                    "Ready to Install", "REQUEST_INSTALL_PACKAGES granted.\nPackage installer will take over on a real deployment.",
+                                    "Ready to Install", "Package verified.\nThe system installer takes over on a real deployment.",
                                     "OK", null).show();
                         }
                     });

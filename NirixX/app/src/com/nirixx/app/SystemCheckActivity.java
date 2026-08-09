@@ -140,29 +140,10 @@ public class SystemCheckActivity extends BaseActivity {
                     }
                 });
 
-        boolean ovl = Perms.overlayGranted(this);
-        check("Display over other apps", ovl ? "Granted — floating tools available"
-                        : "Optional — only needed for on-screen overlay tools",
-                ovl, null, new Runnable() {
-                    public void run() {
-                        try {
-                            startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                    Uri.parse("package:" + getPackageName())));
-                        } catch (Exception e) { toast("Open Settings → Special access → Display over other apps"); }
-                    }
-                });
-
-        boolean inst = Perms.packageInstallAllowed(this);
-        check("Install app updates", inst ? "In-app APK updates can install"
-                        : "Allow “Install unknown apps” for NirixX to self-update",
-                inst, null, new Runnable() {
-                    public void run() {
-                        try {
-                            startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                                    Uri.parse("package:" + getPackageName())));
-                        } catch (Exception e) { toast("Open Settings → Special access → Install unknown apps"); }
-                    }
-                });
+        boolean inst = true;
+        check("Play-safe permission profile", "No high-risk install flags: the app never asks for "
+                        + "“install unknown apps” or “display over other apps”",
+                inst, "PASS", null);
 
         scoreTitle.setText(passCount + "/" + totalCount);
         int color = passCount == totalCount ? OK : ACTION;

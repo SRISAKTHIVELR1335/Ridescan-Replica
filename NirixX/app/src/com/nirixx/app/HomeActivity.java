@@ -74,8 +74,10 @@ public class HomeActivity extends BaseActivity {
         dealer.setText("Dealer: " + Session.dealerName
                 + (Session.dealerEmail.length() > 0 ? " · " + Session.dealerEmail : ""));
 
-        // Foreground session coordinator (like the original ClientService)
-        startService(new android.content.Intent(this, ClientService.class));
+        // Foreground session coordinator (never allowed to take the app down)
+        try {
+            startService(new android.content.Intent(this, ClientService.class));
+        } catch (Exception ignored) { }
     }
 
     @Override

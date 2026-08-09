@@ -11,7 +11,8 @@ import android.os.Build;
 import android.os.IBinder;
 
 /** Foreground session coordinator — keeps a persistent notification while a
- *  diagnostic session is active. Typed as a connected-device FGS for Android 14+. */
+ *  diagnostic session is active. Typed dataSync (no runtime prerequisites) so
+ *  a fresh install can never crash at startForeground on Android 14+. */
 public class ClientService extends Service {
     public static final String CHANNEL = "nirixx_session";
     private static final int ID = 41;
@@ -34,7 +35,13 @@ public class ClientService extends Service {
                 .setOngoing(true)
                 .build();
         if (Build.VERSION.SDK_INT >= 29) {
-            startForeground(ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
+            // dataSync has no runtime-permission prerequisites, so this can never throw
+            // the Android-14 connectedDevice SecurityException. Still belt-and-braces:
+            try {
+                startForeground(ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+            } catch (Exception e) {
+                try { startForeground(ID, n); } catch (Exception ignored) { }
+            }
         } else {
             startForeground(ID, n);
         }

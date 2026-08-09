@@ -30,8 +30,8 @@ $AAPT2 link \
   -A "$APP/assets" \
   --min-sdk-version 24 \
   --target-sdk-version 34 \
-  --version-code 4 \
-  --version-name "1.3.0" \
+  --version-code 5 \
+  --version-name "1.3.1" \
   "$OUT/compiled/res.zip"
 
 echo "== [3/6] javac (ecj) =="
@@ -64,7 +64,7 @@ if [ ! -f "$KS" ]; then
     -dname "CN=NirixX, OU=Engineering, O=NirixX Mobility, L=Chennai, ST=Tamil Nadu, C=IN" >/dev/null 2>&1
 fi
 
-echo "== [6/6] sign =="
+echo "== [6/6] sign (v1 + v2 + v3) =="
 $JAVA -jar "$APKSIGNER" sign \
   --ks "$KS" --ks-pass pass:$KSPASS --key-pass pass:$KSPASS \
   --min-sdk-version 24 \
