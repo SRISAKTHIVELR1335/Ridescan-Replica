@@ -42,7 +42,7 @@ public class ECUDiagnosisActivity extends BaseActivity {
             {"Routine Control", "Supplier service routines & adaptations", Integer.valueOf(R.drawable.firmwarecloud), RoutineControlActivity.class},
             {"IUPR Test — Primary", "In-use performance ratio (primary monitors)", Integer.valueOf(R.drawable.flash), IuprTestActivity.class},
             {"IUPR Test — Secondary", "In-use performance ratio (secondary monitors)", Integer.valueOf(R.drawable.flash), IuprTestActivity.class},
-            {"Gear Learning", "Transmission gear position learning", Integer.valueOf(R.drawable.manualdiagnostic), RoutineControlActivity.class},
+            {"Gear Learning", "Transmission gear position learning", Integer.valueOf(R.drawable.manualdiagnostic), GearLearningActivity.class},
         };
         for (int i = 0; i < fns.length; i++) {
             final Object[] fn = fns[i];

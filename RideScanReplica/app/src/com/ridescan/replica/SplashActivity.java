@@ -12,7 +12,9 @@ public class SplashActivity extends BaseActivity {
         setContentView(R.layout.activity_splash);
         new Handler().postDelayed(new Runnable() {
             public void run() {
-                startActivity(new Intent(SplashActivity.this, WelcomeActivity.class));
+                boolean seen = getSharedPreferences("ridescan", MODE_PRIVATE).getBoolean("tutorial_seen", false);
+                startActivity(new Intent(SplashActivity.this,
+                        seen ? WelcomeActivity.class : TutorialActivity.class));
                 finish();
             }
         }, 1600);

@@ -23,6 +23,8 @@ public final class Session {
 
     public static int dtcsCleared = 0;
     public static boolean reportGenerated = false;
+    public static String userType = "Service Technician";
+    public static String odometer = "—";
 
     public static final List<String[]> vehicles = new ArrayList<String[]>();
     static {

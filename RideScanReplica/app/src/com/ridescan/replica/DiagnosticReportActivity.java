@@ -16,6 +16,15 @@ public class DiagnosticReportActivity extends BaseActivity {
         wireBack();
         LinearLayout content = (LinearLayout) findViewById(R.id.content);
 
+        android.widget.ImageView banner = new android.widget.ImageView(this);
+        banner.setImageResource(R.drawable.motoshield_report_2);
+        banner.setAdjustViewBounds(true);
+        banner.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+        LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(-1, Ui.dp(this, 160));
+        bp.setMargins(0, 0, 0, Ui.dp(this, 12));
+        banner.setBackgroundResource(R.drawable.bg_card);
+        content.addView(banner, bp);
+
         content.addView(Ui.section(this, "SESSION SUMMARY"));
         LinearLayout veh = Ui.card(this);
         veh.addView(Ui.kvRow(this, "Vehicle", Session.selectedVehicle, false));

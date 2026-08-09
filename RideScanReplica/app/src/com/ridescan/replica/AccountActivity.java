@@ -27,9 +27,54 @@ public class AccountActivity extends BaseActivity {
         content.addView(Ui.section(this, "APPLICATION"));
         LinearLayout app = Ui.card(this);
         app.addView(Ui.kvRow(this, "Version", "2.3.6 (replica)", false));
+        app.addView(Ui.kvRow(this, "Signed in as", Session.userType, false));
         app.addView(Ui.kvRow(this, "VCI Firmware", Session.vciFw, false));
         app.addView(Ui.kvRow(this, "Flash config", "flash_variant.json · bundled", true));
         content.addView(app);
+
+        content.addView(Ui.section(this, "MORE TOOLS"));
+        Object[][] tools = new Object[][]{
+            {"Dealer Information", DealerInformationActivity.class},
+            {"File Viewer", FileViewerActivity.class},
+            {"System Monitoring", SystemMonitoringActivity.class},
+            {"Physical Evaluation", PhysicalEvaluationActivity.class},
+            {"Data Watcher", DataWatcherActivity.class},
+            {"App Update", UpdateDescriptionActivity.class},
+        };
+        for (int i = 0; i < tools.length; i++) {
+            final Object[] t = tools[i];
+            LinearLayout row = Ui.listRow(this, R.drawable.setting_1, (String) t[0], "", true);
+            row.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) { go((Class<?>) t[1]); }
+            });
+            content.addView(row);
+        }
+
+        android.widget.Button session = new android.widget.Button(this);
+        session.setText(ScreenRecordOverlayService.recording ? "Stop Session Recording" : "Start Session Recording");
+        session.setTextColor(0xFF00347E);
+        session.setAllCaps(false);
+        session.setTextSize(14.5f);
+        session.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        session.setBackgroundResource(R.drawable.bg_button_outline);
+        LinearLayout.LayoutParams recp = new LinearLayout.LayoutParams(-1, Ui.dp(this, 46));
+        recp.setMargins(0, Ui.dp(this, 6), 0, 0);
+        content.addView(session, recp);
+        session.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                android.content.Intent it = new android.content.Intent(AccountActivity.this, ScreenRecordOverlayService.class);
+                if (!ScreenRecordOverlayService.recording) {
+                    startService(it);
+                    ((android.widget.Button) v).setText("Stop Session Recording");
+                    toast("Screen recording started (overlay service)");
+                } else {
+                    it.setAction("stop");
+                    startService(it);
+                    ((android.widget.Button) v).setText("Start Session Recording");
+                    toast("Recording saved — see File Viewer");
+                }
+            }
+        });
 
         Button out = new Button(this);
         out.setText("Logout");

@@ -37,7 +37,18 @@ public class LoginActivity extends BaseActivity {
         });
 
         findViewById(R.id.txtForgotPin).setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { showForgotPin(); }
+            public void onClick(View v) {
+                String e = edtEmail.getText().toString().trim();
+                if (e.length() > 0) Session.dealerEmail = e;
+                go(OtpActivity.class);
+            }
+        });
+
+        findViewById(R.id.btnSso).setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { go(SsoLoginActivity.class); }
+        });
+        findViewById(R.id.txtRegister).setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { go(RegisterActivity.class); }
         });
     }
 

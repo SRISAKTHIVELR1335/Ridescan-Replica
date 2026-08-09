@@ -14,16 +14,19 @@ public class HomeActivity extends BaseActivity {
     private static final Object[][] TILES = new Object[][]{
         {"VIN Based\nDiagnosis", Integer.valueOf(R.drawable.vindiagnostic), VinDiagnosisActivity.class},
         {"VIN Based\nFlashing", Integer.valueOf(R.drawable.vinflashing), VinFlashingActivity.class},
-        {"Troubleshooting", Integer.valueOf(R.drawable.manualdiagnostic), VinDiagnosisActivity.class},
-        {"ECU\nFlashing", Integer.valueOf(R.drawable.flash_blue), SelectFlashVariantActivity.class},
+        {"Diagnostics", Integer.valueOf(R.drawable.manualdiagnostic), SelectECUActivity.class},
+        {"ECU\nFlashing", Integer.valueOf(R.drawable.flash_blue), SupplierFlashListActivity.class},
+        {"Cluster\nFlashing", Integer.valueOf(R.drawable.racing_bike1), ClusterFlashListActivity.class},
+        {"Manual\nDiagnostic", Integer.valueOf(R.drawable.vintroubleshooting), ManualDiagnosticActivity.class},
         {"Health\nReports", Integer.valueOf(R.drawable.vehicle_health_report), ReportsActivity.class},
         {"Battery\nHealth", Integer.valueOf(R.drawable.battery_health_report), BatteryHealthActivity.class},
-        {"VCI Firmware\nUpdate", Integer.valueOf(R.drawable.firmwarecloud), FirmwareUpdateActivity.class},
+        {"Data\nRecording", Integer.valueOf(R.drawable.vci), LiveDataRecordingActivity.class},
+        {"VCI Firmware\nUpdate", Integer.valueOf(R.drawable.firmwarecloud), VciFirmwareListActivity.class},
         {"Vehicle\nList", Integer.valueOf(R.drawable.motorcycle), VehicleListActivity.class},
         {"Service\nManual", Integer.valueOf(R.drawable.dtclibrary), ServiceManualActivity.class},
-        {"Notifications", Integer.valueOf(R.drawable.notification2), NotificationActivity.class},
-        {"Account", Integer.valueOf(R.drawable.setting_1), AccountActivity.class},
-        {"Health\nScanner", Integer.valueOf(R.drawable.vintroubleshooting), SelectECUActivity.class},
+        {"Logs &\nFiles", Integer.valueOf(R.drawable.dtc_blue), LogViewerActivity.class},
+        {"Support\nChat", Integer.valueOf(R.drawable.notification2), SupportChatActivity.class},
+        {"App\nUpdate", Integer.valueOf(R.drawable.flash), UpdateDescriptionActivity.class},
     };
 
     @Override
@@ -64,6 +67,9 @@ public class HomeActivity extends BaseActivity {
         TextView dealer = (TextView) findViewById(R.id.txtDealer);
         dealer.setText("Dealer: " + Session.dealerName
                 + (Session.dealerEmail.length() > 0 ? " · " + Session.dealerEmail : ""));
+
+        // Foreground session coordinator (like the original ClientService)
+        startService(new android.content.Intent(this, ClientService.class));
     }
 
     @Override

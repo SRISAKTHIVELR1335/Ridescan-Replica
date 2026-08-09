@@ -30,7 +30,7 @@ $AAPT2 link \
   -A "$APP/assets" \
   --min-sdk-version 24 \
   --target-sdk-version 29 \
-  --version-code 1 \
+  --version-code 2 \
   --version-name "2.3.6-replica" \
   "$OUT/compiled/res.zip"
 

@@ -32,6 +32,8 @@ public class FirmwareUpdateActivity extends BaseActivity {
         prog = (ProgressBar) findViewById(R.id.fwProgress);
         stage = (TextView) findViewById(R.id.txtFwStage);
         btn = (Button) findViewById(R.id.btnFwUpdate);
+        String dev = getIntent().getStringExtra("device");
+        if (dev != null && dev.length() > 0) setTitle(dev + " Firmware");
         ((TextView) findViewById(R.id.txtFwCurrent)).setText("Current Firmware: " + Session.vciFw);
         btn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { startUpdate(); }
