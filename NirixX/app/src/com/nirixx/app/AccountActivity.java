@@ -26,7 +26,7 @@ public class AccountActivity extends BaseActivity {
 
         content.addView(Ui.section(this, "APPLICATION"));
         LinearLayout app = Ui.card(this);
-        app.addView(Ui.kvRow(this, "Version", "2.3.6 (replica)", false));
+        app.addView(Ui.kvRow(this, "Version", "1.3.4 (build 8)", false));
         app.addView(Ui.kvRow(this, "Signed in as", Session.userType, false));
         app.addView(Ui.kvRow(this, "VCI Firmware", Session.vciFw, false));
         app.addView(Ui.kvRow(this, "Flash config", "flash_variant.json · bundled", true));

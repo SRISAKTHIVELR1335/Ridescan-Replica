@@ -26,7 +26,7 @@ extra byte is real, on-screen content)
 |---|---|
 | Package | `com.nirixx.app` |
 | Label / tagline | **NirixX** · "Beyond Diagnostics" |
-| Version | `1.3.1` (versionCode 5) |
+| Version | `1.3.4` (versionCode 8) |
 | SDK window | **minSdk 24 (Android 7.0) → targetSdk 34 (Android 14)** |
 | Signature | own NirixX keystore, **APK Signature Scheme v2 + v3** |
 | Architecture | universal (pure Java, no native libs → all ABIs) |
@@ -86,7 +86,7 @@ The repo root holds the complete reverse-engineering analysis of the reference d
 - **Auto-rescan** the instant access is granted (`onRequestPermissionsResult` → live scan).
 - **System Self-Check** screen: live green-tick device scoring with FIX deep-links (§8).
 
-### Phase 6.1 — Hotfix: launch crash + Play-safe profile (v1.3.1, **current**)
+### Phase 6.1 — Hotfix: launch crash + Play-safe profile (v1.3.1)
 - **Fixed the Android-14 launch crash** ("App Status Error. Install again" right after a
   successful install): the session foreground service was typed `connectedDevice`, whose
   runtime prerequisite — Bluetooth permissions *already granted* — cannot hold on a fresh
@@ -100,6 +100,35 @@ The repo root holds the complete reverse-engineering analysis of the reference d
   distributed via Play and only clears by shipping through Play Console.
 - v1 (JAR) signing intentionally omitted: irrelevant at minSdk 24+ (Android 7.0 verifies v2
   natively) and unsupported by the offline signer build.
+
+### Phase 6.2 — Forensics: alignment + self-reporting crash handler (v1.3.2)
+- Wrote `tools/zipalign.py` (raw-zip writer) fixing STORED-entry alignment — `resources.arsc`
+  was landing at offset %4 == 2; Android loads it regardless, but the APK is now canonical.
+- Added `NirixXApp` (Application) with an uncaught-exception handler that persists the full
+  trace; `SplashActivity` surfaces it in a *"NirixX stopped unexpectedly"* dialog on the next
+  launch (turns any device-only crash into a paste-able bug report).
+- `camera` / `camera.autofocus` marked `required="false"`.
+
+### Phase 6.3 — Reference comparison + decisive probe experiment (v1.3.3)
+- Line-by-line package comparison against the reference app (from `classes-dex2jar.jar` +
+  `resources.txt`): the original ships **DEX 039, v2-signature-only** — ours (DEX 035, v2+v3)
+  is the more conservative, wider-compatible artifact; signature/format ruled out as causes of
+  the device-side launch failure.
+- ECJ switched to `-1.7` classfiles; built **`NirixX-Probe.apk`** (255 KB, one hello screen,
+  zero permissions, same pipeline + keystore) to bisect device-block vs app-content faults.
+
+### Phase 6.4 — Automated verification suite + reachability fix (v1.3.4, **current**)
+- New **`tools/verify_apk.py`** (`python3 tools/verify_apk.py` → exit 0 = shippable): parses
+  badging, verifies v2/v3 signatures, checks STORED-entry alignment from *local* zip headers,
+  parses all 217 DEX classes with androguard, proves every manifest-declared component exists
+  in the DEX, cross-checks **all 49 screens** (content layout exists, every `findViewById`
+  id resolves in the correct layout, every navigation target is declared), builds the screen
+  reachability graph from `SplashActivity`, and runs a 21-point Android 12/13/14/15 checklist.
+  Human-readable output: **`VERIFICATION.md`** (21/21 passed, 0 errors, 0 warnings).
+- **Fixed a real UX gap the suite caught:** `AccountActivity` (and the five screens it hubs —
+  Dealer Information, File Viewer, System Monitoring, Physical Evaluation, Data Watcher) had
+  no incoming navigation. Home's dealer footer now opens the Account screen; all 49 screens
+  are reachable from the launcher. Version labels corrected to the honest NirixX numbering.
 
 ---
 
@@ -316,8 +345,13 @@ Verified after every build with `apksigner verify --verbose` and an androguard p
 ```
 NirixX/
 ├── NirixX.apk                  # deliverable (signed, v2+v3)
+├── NirixX-Probe.apk            # 255 KB minimal same-pipeline probe (device-block experiment)
+├── VERIFICATION.md             # generated proof: 21/21 checks, all 49 screens verified
 ├── build.sh                    # hermetic pipeline (steps above)
 ├── manifest/AndroidManifest.xml
+├── tools/
+│   ├── zipalign.py             # raw-zip 4-byte alignment of STORED entries
+│   └── verify_apk.py           # full static verification suite (exit 0 = shippable)
 ├── app/
 │   ├── assets/flash_variant.json    # repo-supplied flash-variant reference data
 │   ├── res/                         # layouts, values, 77 drawables (all original art)
@@ -330,9 +364,11 @@ NirixX/
 
 ## 11. Honest limitations
 
-- No emulator/device exists in this build environment: everything is **statically verified**
-  (compile, manifest, resources, signature) — runtime behavior is best validated by a quick
-  install on a real Android 13/14 phone, especially the permission flows and live BT scan.
+- No emulator/device exists in this build environment (no KVM, and Google image servers are
+  unreachable): everything is **statically verified** — since v1.3.4 by the 21/21 suite in
+  `VERIFICATION.md` (signature, DEX parse, per-screen id resolution, reachability, Android
+  12+ checklist). Runtime behavior is best validated on a real Android 13/14 phone; the
+  built-in crash reporter turns any device-only crash into a paste-able trace on next launch.
 - UDS sessions are simulated until real hardware is paired (by design — see §5.2).
 - Image-generation quota shaped Phase 4: several module arts are PIL-recomposed from masters
   rather than wholly new renders (visually distinct, same quality bar).

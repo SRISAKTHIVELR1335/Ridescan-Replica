@@ -72,7 +72,11 @@ public class HomeActivity extends BaseActivity {
 
         TextView dealer = (TextView) findViewById(R.id.txtDealer);
         dealer.setText("Dealer: " + Session.dealerName
-                + (Session.dealerEmail.length() > 0 ? " · " + Session.dealerEmail : ""));
+                + (Session.dealerEmail.length() > 0 ? " · " + Session.dealerEmail : "")
+                + "   ·  Account ›");
+        dealer.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { go(AccountActivity.class); }
+        });
 
         // Foreground session coordinator (never allowed to take the app down)
         try {
