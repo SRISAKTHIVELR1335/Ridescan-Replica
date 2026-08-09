@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.ridescan.replica"
+    android:versionCode="1"
+    android:versionName="2.3.6">
+
+    <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="29" />
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <application
+        android:label="RIDE Scan 2.0"
+        android:icon="@drawable/ic_launcher"
+        android:theme="@style/Theme.RideScan"
+        android:allowBackup="false"
+        android:supportsRtl="true">
+
+        <activity android:name=".SplashActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".WelcomeActivity" />
+        <activity android:name=".LoginActivity" />
+        <activity android:name=".HomeActivity" />
+        <activity android:name=".AddDeviceActivity" />
+        <activity android:name=".VehicleListActivity" />
+        <activity android:name=".VinDiagnosisActivity" />
+        <activity android:name=".VinFlashingActivity" />
+        <activity android:name=".SelectECUActivity" />
+        <activity android:name=".ECUDiagnosisActivity" />
+        <activity android:name=".ReadDTCsActivity" />
+        <activity android:name=".LiveParameterActivity" />
+        <activity android:name=".IOControlActivity" />
+        <activity android:name=".RoutineControlActivity" />
+        <activity android:name=".IuprTestActivity" />
+        <activity android:name=".SelectFlashVariantActivity" />
+        <activity android:name=".FlashActivity" />
+        <activity android:name=".ReportsActivity" />
+        <activity android:name=".DiagnosticReportActivity" />
+        <activity android:name=".VhrActivity" />
+        <activity android:name=".BatteryHealthActivity" />
+        <activity android:name=".FirmwareUpdateActivity" />
+        <activity android:name=".NotificationActivity" />
+        <activity android:name=".ServiceManualActivity" />
+        <activity android:name=".AccountActivity" />
+    </application>
+</manifest>

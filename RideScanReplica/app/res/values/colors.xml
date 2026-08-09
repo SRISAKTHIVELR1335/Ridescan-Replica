@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="mahle_blue">#FF001F5A</color>
+    <color name="deep_blue">#FF0A2E6E</color>
+    <color name="btn_blue">#FF64B4E1</color>
+    <color name="accent_blue">#FF3E7CB1</color>
+    <color name="light_blue">#FFC6D6E3</color>
+    <color name="tvs_red">#FFE4002B</color>
+    <color name="screen_bg">#FFF2F5F8</color>
+    <color name="card_bg">#FFFFFFFF</color>
+    <color name="text_dark">#FF141B2E</color>
+    <color name="text_grey">#FF5A6472</color>
+    <color name="ok_green">#FF1E9E5A</color>
+    <color name="warn_amber">#FFE8A33D</color>
+    <color name="line_grey">#FFDDE3EA</color>
+    <color name="chip_bg">#FFE8F1F9</color>
+    <color name="console_bg">#FF101726</color>
+</resources>
