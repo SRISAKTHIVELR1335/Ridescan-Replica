@@ -30,8 +30,8 @@ $AAPT2 link \
   -A "$APP/assets" \
   --min-sdk-version 24 \
   --target-sdk-version 34 \
-  --version-code 5 \
-  --version-name "1.3.1" \
+  --version-code 6 \
+  --version-name "1.3.2" \
   "$OUT/compiled/res.zip"
 
 echo "== [3/6] javac (ecj) =="
@@ -64,7 +64,11 @@ if [ ! -f "$KS" ]; then
     -dname "CN=NirixX, OU=Engineering, O=NirixX Mobility, L=Chennai, ST=Tamil Nadu, C=IN" >/dev/null 2>&1
 fi
 
-echo "== [6/6] sign (v1 + v2 + v3) =="
+echo "== [5b/7] zipalign =="
+python3 "$ROOT/tools/zipalign.py" "$OUT/app-unsigned.apk" "$OUT/app-aligned.apk"
+mv "$OUT/app-aligned.apk" "$OUT/app-unsigned.apk"
+
+echo "== [6,7/7] sign =="
 $JAVA -jar "$APKSIGNER" sign \
   --ks "$KS" --ks-pass pass:$KSPASS --key-pass pass:$KSPASS \
   --min-sdk-version 24 \
