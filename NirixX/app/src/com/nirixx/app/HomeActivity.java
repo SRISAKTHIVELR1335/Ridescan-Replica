@@ -27,6 +27,7 @@ public class HomeActivity extends BaseActivity {
         {"Logs &\nFiles", Integer.valueOf(R.drawable.dtc_blue), LogViewerActivity.class},
         {"Support\nChat", Integer.valueOf(R.drawable.notification2), SupportChatActivity.class},
         {"VCI\nCatalog", Integer.valueOf(R.drawable.ecu_module), VciCatalogActivity.class},
+        {"System\nCheck", Integer.valueOf(R.drawable.setting_1), SystemCheckActivity.class},
         {"App\nUpdate", Integer.valueOf(R.drawable.flash), UpdateDescriptionActivity.class},
     };
 

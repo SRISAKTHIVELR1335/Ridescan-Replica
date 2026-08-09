@@ -82,7 +82,7 @@
         android:layout_marginTop="18dp"
         android:layout_marginBottom="14dp"
         android:gravity="center"
-        android:text="Beyond Diagnostics · v1.2.0"
+        android:text="Beyond Diagnostics · v1.3.0"
         android:textColor="#FF7A8794"
         android:textSize="11.5sp"
         android:letterSpacing="0.08" />

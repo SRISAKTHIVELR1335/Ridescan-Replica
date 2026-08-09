@@ -10,7 +10,7 @@ public class UpdateDescriptionActivity extends BaseActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_screen);
-        setTitle("What's New in 1.1.0");
+        setTitle("What's New in 1.3.0");
         wireBack();
         LinearLayout content = (LinearLayout) findViewById(R.id.content);
 
@@ -30,7 +30,7 @@ public class UpdateDescriptionActivity extends BaseActivity {
         LinearLayout.LayoutParams hp = new LinearLayout.LayoutParams(-1, -2);
         hp.setMargins(0, 0, 0, Ui.dp(this, 12));
         content.addView(head, hp);
-        head.addView(Ui.tv(this, "NirixX 1.1.0", 18f, 0xFFFFFFFF, true));
+        head.addView(Ui.tv(this, "NirixX 1.3.0", 18f, 0xFFFFFFFF, true));
         head.addView(Ui.tv(this, "Recommended update · 21.4 MB · Distributed via DMS",
                 12.5f, 0xB3FFFFFF, false));
 
@@ -42,6 +42,8 @@ public class UpdateDescriptionActivity extends BaseActivity {
             "IUPR secondary-monitor history view",
             "VCI recovery flow for bricked TZ Mini dongles",
             "Report PDF rendering and upload reliability fixes",
+            "Modern-Android self-check screen with per-device fix actions",
+            "Bluetooth pairing rationale + auto-rescan on grant",
             "Security: flash payload verification hardening",
         };
         for (int i = 0; i < items.length; i++) {

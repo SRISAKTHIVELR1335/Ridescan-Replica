@@ -56,4 +56,46 @@ public final class Perms {
         }
         return true;
     }
+
+    /** True when everything needed for live Bluetooth discovery is granted. */
+    public static boolean bluetoothGranted(Activity a) {
+        if (Build.VERSION.SDK_INT >= 31) {
+            return granted(a, Manifest.permission.BLUETOOTH_SCAN)
+                    && granted(a, Manifest.permission.BLUETOOTH_CONNECT);
+        }
+        if (Build.VERSION.SDK_INT >= 23) {
+            return granted(a, Manifest.permission.ACCESS_FINE_LOCATION);
+        }
+        return true;
+    }
+
+    /** Whether the system says we should explain before asking again. */
+    public static boolean shouldShowBtRationale(Activity a) {
+        if (Build.VERSION.SDK_INT >= 31) {
+            return a.shouldShowRequestPermissionRationale(Manifest.permission.BLUETOOTH_SCAN)
+                    || a.shouldShowRequestPermissionRationale(Manifest.permission.BLUETOOTH_CONNECT);
+        }
+        if (Build.VERSION.SDK_INT >= 23) {
+            return a.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION);
+        }
+        return false;
+    }
+
+    /** Effective notification state (channel-independent app-level switch). */
+    public static boolean notificationsEnabled(Activity a) {
+        if (Build.VERSION.SDK_INT >= 24) {
+            android.app.NotificationManager nm =
+                    (android.app.NotificationManager) a.getSystemService(Activity.NOTIFICATION_SERVICE);
+            return nm != null && nm.areNotificationsEnabled();
+        }
+        return true;
+    }
+
+    public static boolean overlayGranted(Activity a) {
+        return Build.VERSION.SDK_INT < 23 || android.provider.Settings.canDrawOverlays(a);
+    }
+
+    public static boolean packageInstallAllowed(Activity a) {
+        return Build.VERSION.SDK_INT < 26 || a.getPackageManager().canRequestPackageInstalls();
+    }
 }

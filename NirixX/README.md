@@ -14,9 +14,15 @@ structure, roadmap), shipped under the NirixX brand with its own visual identity
 `NirixX.apk` (~36 MB — richer media and content than the 29.5 MB reference build)
 
 - Package `com.nirixx.app` · Label **NirixX** · Tagline **"Beyond Diagnostics"**
-- versionName `1.2.0` (vc 3) · **minSdk 24 (Android 7.0) → targetSdk 34 (Android 14)**
+- versionName `1.3.0` (vc 4) · **minSdk 24 (Android 7.0) → targetSdk 34 (Android 14)**
 - **APK Signature Scheme v2 + v3** (own NirixX keystore) · universal APK (pure Java — all ABIs)
-- **48 activities + 4 services** · pure Java + Android framework (no AndroidX)
+- **49 activities + 4 services** · pure Java + Android framework (no AndroidX)
+
+## Permission UX & self-check (v1.3.0)
+
+- **Bluetooth rationale dialog** before the system prompt (explains *nearby devices* vs. location, with a "Continue in demo mode" escape hatch)
+- **Auto-rescan** the moment the user grants Bluetooth access (`onRequestPermissionsResult` → live scan, no manual retry)
+- **System Self-Check screen** (Home tile): live green-tick scoring of every modern-Android requirement on the actual device — API target, BT hardware/radio state, nearby-devices permission (or pre-12 location), notifications, overlay, unknown-app installs — each with a **FIX** button that jumps straight to the right settings screen or permission prompt, re-scored automatically on return
 
 ## Modern-Android readiness (v1.2.0)
 
