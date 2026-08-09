@@ -14,9 +14,20 @@ structure, roadmap), shipped under the NirixX brand with its own visual identity
 `NirixX.apk` (~36 MB — richer media and content than the 29.5 MB reference build)
 
 - Package `com.nirixx.app` · Label **NirixX** · Tagline **"Beyond Diagnostics"**
-- versionName `1.1.0` (vc 2) · minSdk 24 · targetSdk 29
-- **APK Signature Scheme v2 + v3** (own NirixX keystore)
+- versionName `1.2.0` (vc 3) · **minSdk 24 (Android 7.0) → targetSdk 34 (Android 14)**
+- **APK Signature Scheme v2 + v3** (own NirixX keystore) · universal APK (pure Java — all ABIs)
 - **48 activities + 4 services** · pure Java + Android framework (no AndroidX)
+
+## Modern-Android readiness (v1.2.0)
+
+| Area | Handling |
+|---|---|
+| Android 12+ Bluetooth | `BLUETOOTH_SCAN` (`neverForLocation`) + `BLUETOOTH_CONNECT` requested at runtime via `Perms`; graceful fallback to simulation when denied; API 29–30 gets the legacy `ACCESS_FINE_LOCATION` prompt |
+| Android 13+ notifications | `POST_NOTIFICATIONS` requested once at first Home launch |
+| Android 14+ foreground service | `ClientService` typed `connectedDevice` (+ `FOREGROUND_SERVICE_CONNECTED_DEVICE`), typed `startForeground()` call on API 29+ |
+| Manifest hygiene | Explicit `android:exported` on all components, immutable `PendingIntent`, `RECEIVER_EXPORTED` registration on API 33+, `enableOnBackInvokedCallback` (predictive back), storage permissions capped (`maxSdkVersion`) |
+| Display | Adaptive launcher icon (API 26+ mipmap + fallback), display-cutout `shortEdges`, status/nav bar coloring |
+| Install surface | BT/BLE/Wi-Fi/camera all `required="false"` — installs on any phone or tablet; minSdk 24 covers ~99% of devices in the field |
 
 ## NirixX identity
 

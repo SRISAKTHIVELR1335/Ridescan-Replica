@@ -6,11 +6,12 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.os.IBinder;
 
-/** Foreground session coordinator — mirrors the original ClientService/SerialService pairing:
- *  keeps a persistent notification while a diagnostic session is active. */
+/** Foreground session coordinator — keeps a persistent notification while a
+ *  diagnostic session is active. Typed as a connected-device FGS for Android 14+. */
 public class ClientService extends Service {
     public static final String CHANNEL = "nirixx_session";
     private static final int ID = 41;
@@ -32,7 +33,11 @@ public class ClientService extends Service {
                 .setContentIntent(pi)
                 .setOngoing(true)
                 .build();
-        startForeground(ID, n);
+        if (Build.VERSION.SDK_INT >= 29) {
+            startForeground(ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
+        } else {
+            startForeground(ID, n);
+        }
         return START_STICKY;
     }
 

@@ -93,7 +93,12 @@ public final class VciManager {
                 IntentFilter f = new IntentFilter();
                 f.addAction(BluetoothDevice.ACTION_FOUND);
                 f.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
-                activity.registerReceiver(receiver, f);
+                // System broadcasts; API 33+ flag keeps modern receivers explicit.
+                if (android.os.Build.VERSION.SDK_INT >= 33) {
+                    activity.registerReceiver(receiver, f, Context.RECEIVER_EXPORTED);
+                } else {
+                    activity.registerReceiver(receiver, f);
+                }
                 try { adapter.startDiscovery(); }
                 catch (SecurityException se) { cb.onFinished(true); }
                 // Hard stop after 12 s of scanning.

@@ -34,6 +34,10 @@ public class HomeActivity extends BaseActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
+        if (!getSharedPreferences("nirixx", MODE_PRIVATE).getBoolean("notif_asked", false)) {
+            Perms.ensureNotifications(this);
+            getSharedPreferences("nirixx", MODE_PRIVATE).edit().putBoolean("notif_asked", true).apply();
+        }
 
         GridLayout grid = (GridLayout) findViewById(R.id.gridTiles);
         LayoutInflater inf = getLayoutInflater();

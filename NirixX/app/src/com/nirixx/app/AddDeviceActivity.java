@@ -32,6 +32,7 @@ public class AddDeviceActivity extends BaseActivity implements VciManager.ScanCa
     }
 
     private void scan() {
+        Perms.ensureBluetooth(this);
         content.removeAllViews();
         content.addView(Ui.section(this, "SCANNING FOR VCI DEVICES…"));
         status = Ui.tv(this, "Looking for NirixX hardware and compatible adapters…",
