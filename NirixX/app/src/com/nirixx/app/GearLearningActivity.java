@@ -35,7 +35,7 @@ public class GearLearningActivity extends BaseActivity {
             LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.HORIZONTAL);
             TextView n = Ui.tv(this, String.valueOf(i + 1), 13f, 0xFFFFFFFF, true);
-            n.setBackground(Ui.roundRect(0xFF252E66, 20, this));
+            n.setBackground(Ui.roundRect(0xFF0B8376, 20, this));
             n.setGravity(android.view.Gravity.CENTER);
             LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(Ui.dp(this, 26), Ui.dp(this, 26));
             np.setMargins(0, Ui.dp(this, 6), Ui.dp(this, 12), 0);

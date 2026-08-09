@@ -32,7 +32,7 @@ public class LiveDataRecordingActivity extends BaseActivity {
             top.setOrientation(LinearLayout.HORIZONTAL);
             top.setGravity(android.view.Gravity.CENTER_VERTICAL);
             top.addView(Ui.tv(this, s[0], 13.5f, 0xFF141B2E, true), new LinearLayout.LayoutParams(0, -2, 1f));
-            top.addView(Ui.chip(this, "▶ Play", R.drawable.bg_chip, 0xFF252E66));
+            top.addView(Ui.chip(this, "▶ Play", R.drawable.bg_chip, 0xFF0B8376));
             card.addView(top);
             TextView d = Ui.tv(this, s[1] + "  ·  " + s[2], 12f, 0xFF5A6472, false);
             d.setPadding(0, Ui.dp(this, 4), 0, 0);

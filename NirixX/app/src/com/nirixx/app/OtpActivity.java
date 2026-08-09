@@ -79,7 +79,7 @@ public class OtpActivity extends BaseActivity {
             }
             public void onFinish() {
                 timer.setText("Resend now");
-                timer.setTextColor(0xFF252E66);
+                timer.setTextColor(0xFF0B8376);
             }
         }.start();
     }

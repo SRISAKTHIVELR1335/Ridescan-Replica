@@ -74,7 +74,7 @@ public class SupportChatActivity extends BaseActivity {
     }
 
     private void suggest(final String label, final String key) {
-        TextView chip = Ui.chip(this, label, R.drawable.bg_chip, 0xFF252E66);
+        TextView chip = Ui.chip(this, label, R.drawable.bg_chip, 0xFF0B8376);
         LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(-2, -2);
         cp.setMargins(Ui.dp(this, 4), Ui.dp(this, 6), 0, 0);
         chat.addView(chip, cp);
@@ -91,7 +91,7 @@ public class SupportChatActivity extends BaseActivity {
 
     private void bubble(String text, boolean bot) {
         TextView t = Ui.tv(this, text, 13f, bot ? 0xFF141B2E : 0xFFFFFFFF, false);
-        t.setBackground(Ui.roundRect(bot ? 0xFFE4F5FB : 0xFF252E66, 12, this));
+        t.setBackground(Ui.roundRect(bot ? 0xFFE4F5FB : 0xFF0B8376, 12, this));
         int hp = Ui.dp(this, 12), vp = Ui.dp(this, 8);
         t.setPadding(hp, vp, hp, vp);
         t.setLineSpacing(1.25f, 1f);

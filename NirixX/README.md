@@ -11,22 +11,50 @@ structure, roadmap), shipped under the NirixX brand with its own visual identity
 
 ## Deliverable
 
-`NirixX.apk` (~4.7 MB)
+`NirixX.apk` (~36 MB — richer media and content than the 29.5 MB reference build)
 
-- Package `com.nirixx.app` · Label **NirixX** · versionName `1.0.0` (vc 1)
-- minSdk 24 · targetSdk 29 · **APK Signature Scheme v2 + v3** (own NirixX keystore)
-- **47 activities + 4 services** · pure Java + Android framework (no AndroidX)
+- Package `com.nirixx.app` · Label **NirixX** · Tagline **"Beyond Diagnostics"**
+- versionName `1.1.0` (vc 2) · minSdk 24 · targetSdk 29
+- **APK Signature Scheme v2 + v3** (own NirixX keystore)
+- **48 activities + 4 services** · pure Java + Android framework (no AndroidX)
 
 ## NirixX identity
 
 | Element | Value |
 |---|---|
 | Primary | `#141A4A` midnight indigo |
-| Deep | `#0A0E2C` |
-| Accent | `#2BD9FF` electric cyan |
-| Steel | `#4B7BFF` |
+| Accent (chrome) | `#0B8376` deep teal / `#18E0C8` electric teal |
+| Success | `#23C79A` |
 | Attention | `#E63946` |
-| Icon/wordmark | generated N-bolt monogram + DejaVu oblique wordmark with cyan underline |
+| Tagline | **Beyond Diagnostics** |
+| Artwork | 100% AI-generated for this project (VCI renders, module art, banners, wireframes) |
+
+## VCI support matrix (v1.1.0)
+
+**NirixX hardware:** NRX Pro VCI · TZ VCI (Classic) · TZ Mini VCI · TZ New VCI · TZ 24V HD VCI · NirixX Link Pod
+**Compatible third-party Android adapters:** ELM327-compatible SPP · ELM327-compatible BLE · J2534 pass-thru (Wi-Fi) · USB K-Line (OTG)
+
+The `com.nirixx.app.vci` package is a genuine Android Bluetooth stack, not a mock seam:
+- `VciTransport` — interface all sessions use (states, byte pump, errors)
+- `BluetoothSppTransport` — **real RFCOMM/SPP socket I/O** (bonded + discovered devices)
+- `BleTransport` — GATT UART scaffold (MTU 247, CCC notifications, per-VCI UUID plugs)
+- `SimTransport` — scripted UDS responses so every screen works without hardware
+- `VciManager` — real discovery merged with the simulation pool; picks live transport
+  when hardware is present and transparently falls back to simulation
+
+## Module coverage (mapped to `RideScan_PRD.md` §12)
+
+| Area | Screens |
+|---|---|
+| Auth | Splash → Tutorial → Welcome → Login (PIN) → NirixX ID (SSO-style) → Register → Forgot PIN → OTP → New PIN → UserType |
+| Connectivity | Add Device (live BT scan + sim pool), **VCI Catalog (10 models)**, VCI status card, foreground `ClientService` notification |
+| Vehicles | Vehicle list (+ add dialog), VIN diagnosis/flashing with identity card |
+| Diagnostics | Select ECU (6 ECU families) → Read DTCs (freeze frames, clear UDS 0x14), Live Parameters (animated stream + recording), IO Control (momentary actuators), Routine Control (UDS console), IUPR Primary/Secondary (AIS-137), Gear Learning, Manual Diagnostic, Data Watcher |
+| ECU flashing | **~25 supplier modules** with IMAGE/Bootloader pickers + odometer dialog + staged flash engine — plus VIN-driven variant flow backed by the real `flash_variant.json` (repo-supplied reference data) |
+| Cluster flashing | J125, N597, U577 Basic/Premium, U732 RLCD/TFT, U796 |
+| VCI firmware | All 6 NirixX hardware generations (S-record transfer pipeline, recovery note) |
+| Reports | Diagnostic Report (+ DMS upload), **NirixX VHR** (4 tabs + PDF export), Battery Health (SoH gauge), report list with generated banner artwork |
+| Support | Log Viewer (level filters), File Viewer, Notification center, Service Manual library, NirixX Assistant chat, Physical Evaluation, System Monitoring |
 
 ## Module coverage (mapped to `RideScan_PRD.md` §12)
 

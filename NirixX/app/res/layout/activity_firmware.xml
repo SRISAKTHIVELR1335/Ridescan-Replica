@@ -89,7 +89,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
                         android:text="Available: 2.19.1"
-                        android:textColor="#FF252E66"
+                        android:textColor="#FF0B8376"
                         android:textSize="13sp"
                         android:textStyle="bold" />
 

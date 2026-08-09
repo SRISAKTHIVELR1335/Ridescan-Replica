@@ -15,5 +15,8 @@ public class WelcomeActivity extends BaseActivity {
         findViewById(R.id.btnGetStarted).setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { go(LoginActivity.class); }
         });
+        findViewById(R.id.btnSso).setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { go(SsoLoginActivity.class); }
+        });
     }
 }

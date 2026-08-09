@@ -40,7 +40,7 @@ public class LogViewerActivity extends BaseActivity {
         final String[] lv = {"ALL", "V", "D", "I", "W", "E"};
         for (int i = 0; i < lv.length; i++) {
             final String l = lv[i];
-            TextView chip = Ui.chip(this, l, R.drawable.bg_chip, 0xFF252E66);
+            TextView chip = Ui.chip(this, l, R.drawable.bg_chip, 0xFF0B8376);
             chip.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) { filter = l; render(); }
             });

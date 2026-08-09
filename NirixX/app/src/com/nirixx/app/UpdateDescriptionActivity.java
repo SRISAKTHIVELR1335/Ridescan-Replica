@@ -10,9 +10,17 @@ public class UpdateDescriptionActivity extends BaseActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_screen);
-        setTitle("What's New in 2.3.7");
+        setTitle("What's New in 1.1.0");
         wireBack();
         LinearLayout content = (LinearLayout) findViewById(R.id.content);
+
+        android.widget.ImageView art = new android.widget.ImageView(this);
+        art.setImageResource(R.drawable.update_art);
+        art.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+        art.setBackgroundResource(R.drawable.bg_console);
+        LinearLayout.LayoutParams ap = new LinearLayout.LayoutParams(-1, Ui.dp(this, 132));
+        ap.setMargins(0, 0, 0, Ui.dp(this, 10));
+        content.addView(art, ap);
 
         LinearLayout head = new LinearLayout(this);
         head.setOrientation(LinearLayout.VERTICAL);

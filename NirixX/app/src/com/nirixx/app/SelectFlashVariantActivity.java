@@ -126,9 +126,9 @@ public class SelectFlashVariantActivity extends BaseActivity {
         mid.setOrientation(LinearLayout.VERTICAL);
         mid.setPadding(Ui.dp(this, 8), 0, 0, 0);
         mid.addView(Ui.tv(this, r[2], 14.5f, 0xFF141B2E, true));
-        mid.addView(Ui.tv(this, r[0] + "  ·  " + r[3] + "  ·  " + r[4], 11.5f, 0xFF252E66, true));
+        mid.addView(Ui.tv(this, r[0] + "  ·  " + r[3] + "  ·  " + r[4], 11.5f, 0xFF0B8376, true));
         top.addView(mid, new LinearLayout.LayoutParams(0, -2, 1f));
-        top.addView(Ui.chip(this, r[4], R.drawable.bg_chip, 0xFF252E66));
+        top.addView(Ui.chip(this, r[4], R.drawable.bg_chip, 0xFF0B8376));
         card.addView(top);
         if (r[1] != null && r[1].trim().length() > 0) {
             TextView desc = Ui.tv(this, r[1], 12f, 0xFF5A6472, false);

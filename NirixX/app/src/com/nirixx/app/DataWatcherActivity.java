@@ -41,7 +41,7 @@ public class DataWatcherActivity extends BaseActivity {
         ll.setOrientation(LinearLayout.VERTICAL);
         ll.addView(Ui.tv(this, name, 13f, 0xFF5A6472, true));
         row.addView(ll, new LinearLayout.LayoutParams(0, -2, 1f));
-        TextView v = Ui.tv(this, "—", 30f, 0xFF252E66, true);
+        TextView v = Ui.tv(this, "—", 30f, 0xFF0B8376, true);
         row.addView(v);
         TextView u = Ui.tv(this, " " + unit, 13f, 0xFF9AA6B4, false);
         row.addView(u);

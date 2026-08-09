@@ -26,7 +26,7 @@ public class ClusterFlashListActivity extends BaseActivity {
         content.addView(Ui.section(this, "SELECT CLUSTER MODULE"));
         for (int i = 0; i < CLUSTERS.length; i++) {
             final String[] cDat = CLUSTERS[i];
-            LinearLayout row = Ui.listRow(this, R.drawable.racing_bike1, cDat[0], cDat[1], true);
+            LinearLayout row = Ui.listRow(this, R.drawable.mod_cluster, cDat[0], cDat[1], true);
             row.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     android.content.Intent it = new android.content.Intent(ClusterFlashListActivity.this, SupplierFlashActivity.class);

@@ -53,14 +53,14 @@ public class VehicleListActivity extends BaseActivity {
             top.setGravity(android.view.Gravity.CENTER_VERTICAL);
             ImageView bike = new ImageView(this);
             bike.setImageResource(R.drawable.motorcycle);
-            bike.setColorFilter(0xFF252E66);
+            bike.setColorFilter(0xFF0B8376);
             top.addView(bike, new LinearLayout.LayoutParams(Ui.dp(this, 30), Ui.dp(this, 30)));
             android.widget.TextView t = Ui.tv(this, veh[0], 15f, 0xFF141B2E, true);
             t.setPadding(Ui.dp(this, 12), 0, 0, 0);
             top.addView(t, new LinearLayout.LayoutParams(0, -2, 1f));
             card.addView(top);
             card.addView(Ui.tv(this, veh[1], 12f, 0xFF5A6472, false));
-            android.widget.TextView vin = Ui.tv(this, veh[2], 12.5f, 0xFF252E66, true);
+            android.widget.TextView vin = Ui.tv(this, veh[2], 12.5f, 0xFF0B8376, true);
             vin.setPadding(0, Ui.dp(this, 6), 0, 0);
             card.addView(vin);
             android.widget.TextView last = Ui.tv(this, "Last serviced: " + veh[3], 11.5f, 0xFF9AA6B4, false);

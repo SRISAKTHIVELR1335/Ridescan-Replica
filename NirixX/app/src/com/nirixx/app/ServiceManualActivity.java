@@ -26,7 +26,7 @@ public class ServiceManualActivity extends BaseActivity {
         for (int i = 0; i < DOCS.length; i++) {
             final String[] d = DOCS[i];
             LinearLayout row = Ui.listRow(this, R.drawable.dtclibrary, d[0], d[1], false);
-            android.widget.TextView dl = Ui.chip(this, "Download", R.drawable.bg_chip, 0xFF252E66);
+            android.widget.TextView dl = Ui.chip(this, "Download", R.drawable.bg_chip, 0xFF0B8376);
             ((LinearLayout) row).addView(dl);
             row.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) { download(d[0]); }

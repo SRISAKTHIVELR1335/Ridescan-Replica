@@ -52,7 +52,7 @@ public class AccountActivity extends BaseActivity {
 
         android.widget.Button session = new android.widget.Button(this);
         session.setText(ScreenRecordOverlayService.recording ? "Stop Session Recording" : "Start Session Recording");
-        session.setTextColor(0xFF252E66);
+        session.setTextColor(0xFF0B8376);
         session.setAllCaps(false);
         session.setTextSize(14.5f);
         session.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);

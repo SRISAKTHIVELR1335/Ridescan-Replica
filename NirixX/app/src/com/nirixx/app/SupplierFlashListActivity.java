@@ -54,10 +54,14 @@ public class SupplierFlashListActivity extends BaseActivity {
             for (int i = 0; i < MODULES.length; i++) {
                 final String[] m = MODULES[i];
                 if (!FAMILIES[f].equals(m[1])) continue;
-                int icon = m[1].contains("BOSCH") ? R.drawable.vci
+                int icon = m[0].contains("Keyless") ? R.drawable.mod_keyfob
                         : (m[0].contains("TPMS") ? R.drawable.battery
-                        : (m[0].contains("Keyless") ? R.drawable.keyless_ecu_ic
-                        : (m[0].contains("Cluster") || m[0].contains("Pricol") ? R.drawable.racing_bike1 : R.drawable.ecuf)));
+                        : (m[1].contains("BOSCH") ? R.drawable.mod_abs
+                        : (m[1].contains("PRICOL") ? R.drawable.mod_cluster
+                        : (m[1].contains("SEDEMAC") ? R.drawable.mod_fi
+                        : (m[1].contains("MIKUNI") ? R.drawable.mod_bcm
+                        : (m[1].contains("KEIHIN") ? R.drawable.mod_isg
+                        : R.drawable.ecu_module))))));
                 LinearLayout row = Ui.listRow(this, icon, m[0], m[2] + "  ·  " + m[3], true);
                 row.setOnClickListener(new View.OnClickListener() {
                     public void onClick(View v) {

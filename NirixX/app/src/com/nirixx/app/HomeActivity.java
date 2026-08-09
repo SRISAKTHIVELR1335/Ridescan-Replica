@@ -26,6 +26,7 @@ public class HomeActivity extends BaseActivity {
         {"Service\nManual", Integer.valueOf(R.drawable.dtclibrary), ServiceManualActivity.class},
         {"Logs &\nFiles", Integer.valueOf(R.drawable.dtc_blue), LogViewerActivity.class},
         {"Support\nChat", Integer.valueOf(R.drawable.notification2), SupportChatActivity.class},
+        {"VCI\nCatalog", Integer.valueOf(R.drawable.ecu_module), VciCatalogActivity.class},
         {"App\nUpdate", Integer.valueOf(R.drawable.flash), UpdateDescriptionActivity.class},
     };
 
@@ -41,7 +42,7 @@ public class HomeActivity extends BaseActivity {
             View cell = inf.inflate(R.layout.tile, grid, false);
             ImageView icon = (ImageView) cell.findViewById(R.id.tileIcon);
             icon.setImageResource(((Integer) tile[1]).intValue());
-            icon.setColorFilter(0xFF252E66);
+            icon.setColorFilter(0xFF0B8376);
             ((TextView) cell.findViewById(R.id.tileLabel)).setText((String) tile[0]);
             cell.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) { go((Class<?>) tile[2]); }

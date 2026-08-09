@@ -30,8 +30,8 @@ $AAPT2 link \
   -A "$APP/assets" \
   --min-sdk-version 24 \
   --target-sdk-version 29 \
-  --version-code 1 \
-  --version-name "1.0.0" \
+  --version-code 2 \
+  --version-name "1.1.0" \
   "$OUT/compiled/res.zip"
 
 echo "== [3/6] javac (ecj) =="

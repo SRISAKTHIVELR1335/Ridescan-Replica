@@ -25,10 +25,18 @@ public class UpdateActivity extends BaseActivity {
         wireBack();
         LinearLayout content = (LinearLayout) findViewById(R.id.content);
 
+        android.widget.ImageView art = new android.widget.ImageView(this);
+        art.setImageResource(R.drawable.report_cover);
+        art.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+        art.setBackgroundResource(R.drawable.bg_console);
+        LinearLayout.LayoutParams ap = new LinearLayout.LayoutParams(-1, Ui.dp(this, 150));
+        ap.setMargins(0, 0, 0, Ui.dp(this, 10));
+        content.addView(art, ap);
+
         LinearLayout card = Ui.card(this);
         card.addView(Ui.tv(this, "NirixX 1.1.0", 17f, 0xFF141B2E, true));
         card.addView(Ui.tv(this, "nirixx.io/updates/nirixx-1.1.0.apk", 12f, 0xFF5A6472, false));
-        state = Ui.tv(this, "Downloading File...", 13.5f, 0xFF252E66, true);
+        state = Ui.tv(this, "Downloading File...", 13.5f, 0xFF0B8376, true);
         state.setPadding(0, Ui.dp(this, 14), 0, 0);
         card.addView(state);
         bar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);

@@ -64,7 +64,7 @@ public class SupplierFlashActivity extends BaseActivity {
 
         LinearLayout progCard = Ui.card(this);
         stage = Ui.tv(this, "Ready to flash", 15f, 0xFF141B2E, true);
-        pct = Ui.tv(this, "0%", 26f, 0xFF252E66, true);
+        pct = Ui.tv(this, "0%", 26f, 0xFF0B8376, true);
         pct.setGravity(android.view.Gravity.RIGHT);
         LinearLayout top = new LinearLayout(this);
         top.setOrientation(LinearLayout.HORIZONTAL);

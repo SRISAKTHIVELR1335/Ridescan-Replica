@@ -94,7 +94,7 @@ public class LiveParameterActivity extends BaseActivity {
         top.setOrientation(LinearLayout.HORIZONTAL);
         top.setGravity(android.view.Gravity.CENTER_VERTICAL);
         top.addView(Ui.tv(this, pd.name, 13.5f, 0xFF141B2E, true), new LinearLayout.LayoutParams(0, -2, 1f));
-        TextView val = Ui.tv(this, "", 15f, 0xFF252E66, true);
+        TextView val = Ui.tv(this, "", 15f, 0xFF0B8376, true);
         val.setTag("VAL");
         top.addView(val);
         card.addView(top);

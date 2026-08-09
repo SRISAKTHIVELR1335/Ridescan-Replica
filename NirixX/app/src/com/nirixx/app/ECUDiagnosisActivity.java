@@ -60,7 +60,7 @@ public class ECUDiagnosisActivity extends BaseActivity {
 
         android.widget.Button flashBtn = new android.widget.Button(this);
         flashBtn.setText("Proceed to Flashing");
-        flashBtn.setTextColor(0xFF252E66);
+        flashBtn.setTextColor(0xFF0B8376);
         flashBtn.setTextSize(14.5f);
         flashBtn.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         flashBtn.setBackgroundResource(R.drawable.bg_button_outline);

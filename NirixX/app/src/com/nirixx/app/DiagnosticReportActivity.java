@@ -65,7 +65,7 @@ public class DiagnosticReportActivity extends BaseActivity {
 
         Button view = new Button(this);
         view.setText("View PDF");
-        view.setTextColor(0xFF252E66);
+        view.setTextColor(0xFF0B8376);
         view.setAllCaps(false);
         view.setBackgroundResource(R.drawable.bg_button_outline);
         LinearLayout.LayoutParams vp = new LinearLayout.LayoutParams(-1, Ui.dp(this, 46));

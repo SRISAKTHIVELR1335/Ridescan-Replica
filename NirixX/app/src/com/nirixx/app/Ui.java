@@ -163,7 +163,7 @@ public final class Ui {
             });
             btnRow.addView(s);
         }
-        TextView pv = tv(a, primary, 14f, 0xFF252E66, true);
+        TextView pv = tv(a, primary, 14f, 0xFF0B8376, true);
         pv.setPadding(dp(a, 16), dp(a, 8), dp(a, 16), dp(a, 8));
         pv.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { d.dismiss(); if (onPrimary != null) onPrimary.run(); }
@@ -227,7 +227,7 @@ public final class Ui {
             bp.setMargins(0, dp(a, 6), 0, 0);
             root.addView(b, bp);
         }
-        TextView pv = tv(a, primary, 14f, 0xFF252E66, true);
+        TextView pv = tv(a, primary, 14f, 0xFF0B8376, true);
         pv.setPadding(dp(a, 16), dp(a, 10), dp(a, 16), dp(a, 10));
         LinearLayout.LayoutParams pp = new LinearLayout.LayoutParams(-2, -2);
         pp.setMargins(0, dp(a, 14), 0, 0);

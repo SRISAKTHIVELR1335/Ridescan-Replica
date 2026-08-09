@@ -52,10 +52,10 @@ public class VhrActivity extends BaseActivity {
 
     private void select(int idx) {
         for (int i = 0; i < TABS.length; i++) {
-            tabViews[i].setTextColor(i == idx ? 0xFF252E66 : 0xFF5A6472);
+            tabViews[i].setTextColor(i == idx ? 0xFF0B8376 : 0xFF5A6472);
             tabViews[i].setBackgroundResource(0);
         }
-        tabViews[idx].setTextColor(0xFF252E66);
+        tabViews[idx].setTextColor(0xFF0B8376);
         body.removeAllViews();
         switch (idx) {
             case 0: dealerTab(); break;

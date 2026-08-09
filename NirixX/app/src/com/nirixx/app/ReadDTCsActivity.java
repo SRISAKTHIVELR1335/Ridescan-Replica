@@ -34,7 +34,7 @@ public class ReadDTCsActivity extends BaseActivity {
         TextView chip;
         if (!cleared && Session.dtcsCleared == 0) {
             chip = Ui.chip(this, "VCI: " + (Session.vciConnected ? Session.vciName : "demo session"),
-                    R.drawable.bg_chip, 0xFF252E66);
+                    R.drawable.bg_chip, 0xFF0B8376);
             summary.addView(chip);
             TextView count = Ui.chip(this, Session.DTC_DATA.length + " DTCs found",
                     R.drawable.bg_chip_red, 0xFFC41230);
@@ -42,7 +42,7 @@ public class ReadDTCsActivity extends BaseActivity {
             cp.setMargins(Ui.dp(this, 8), 0, 0, 0);
             summary.addView(count, cp);
         } else {
-            chip = Ui.chip(this, " " , R.drawable.bg_chip, 0xFF252E66);
+            chip = Ui.chip(this, " " , R.drawable.bg_chip, 0xFF0B8376);
             chip.setVisibility(View.GONE);
             summary.addView(chip);
             TextView ok = Ui.chip(this, "No DTCs — system healthy", R.drawable.bg_chip_green, 0xFF1E7A46);
@@ -101,7 +101,7 @@ public class ReadDTCsActivity extends BaseActivity {
 
         Button refresh = new Button(this);
         refresh.setText("Refresh");
-        refresh.setTextColor(0xFF252E66);
+        refresh.setTextColor(0xFF0B8376);
         refresh.setAllCaps(false);
         refresh.setBackgroundResource(R.drawable.bg_button_outline);
         bar.addView(refresh, new LinearLayout.LayoutParams(0, Ui.dp(this, 46), 1f));

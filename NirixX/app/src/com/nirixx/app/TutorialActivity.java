@@ -10,11 +10,11 @@ import android.widget.TextView;
 
 /** First-run tutorial: 3 slides with dots, Next / Skip, matching the original onboarding. */
 public class TutorialActivity extends BaseActivity {
-    private static final int[] SLIDES = new int[]{ R.drawable.welcome_bike, R.drawable.vciimage, R.drawable.login_bike1 };
-    private static final String[] TITLES = new String[]{ "Diagnose any supported two-wheeler", "Connect via NirixX VCI", "Flash, report & go" };
+    private static final int[] SLIDES = new int[]{ R.drawable.tut_workshop, R.drawable.vciimage, R.drawable.welcome_bike };
+    private static final String[] TITLES = new String[]{ "Your workshop, upgraded", "Connect via any NirixX VCI", "Flash, report & go" };
     private static final String[] SUBS = new String[]{
         "Read DTCs, stream live parameters and run actuator tests across every ECU supplier.",
-        "Pair over Bluetooth Classic or BLE, keep firmware up to date, and recover bricked dongles.",
+        "Pair over Bluetooth Classic, BLE, Wi-Fi or USB — a real transport stack, with simulation built in.",
         "VIN-based flashing, vehicle health reports and DMS sync — one tool for the whole bay." };
 
     private LinearLayout dotStrip;
@@ -92,7 +92,7 @@ public class TutorialActivity extends BaseActivity {
         dotStrip.removeAllViews();
         for (int k = 0; k < SLIDES.length; k++) {
             View d = new View(this);
-            d.setBackground(Ui.roundRect(k == i ? 0xFF252E66 : 0xFFCFD8E2, 6, this));
+            d.setBackground(Ui.roundRect(k == i ? 0xFF0B8376 : 0xFFCFD8E2, 6, this));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                     k == i ? Ui.dp(this, 22) : Ui.dp(this, 8), Ui.dp(this, 8));
             lp.setMargins(0, 0, Ui.dp(this, 6), 0);
