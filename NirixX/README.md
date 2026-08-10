@@ -19,24 +19,91 @@ original code and artwork**.
 
 ## 1. Deliverable
 
-**`NirixX.apk`** — 36.2 MB (deliberately richer than the 29.5 MB reference build, and every
+**`NirixX.apk`** — 39.2 MB (deliberately richer than the 29.5 MB reference build, and every
 extra byte is real, on-screen content)
 
 | Property | Value |
 |---|---|
 | Package | `com.nirixx.app` |
 | Label / tagline | **NirixX** · "Beyond Diagnostics" |
-| Version | `1.3.4` (versionCode 8) |
+| Version | `1.4.0` (versionCode 9) |
 | SDK window | **minSdk 24 (Android 7.0) → targetSdk 34 (Android 14)** |
 | Signature | own NirixX keystore, **APK Signature Scheme v2 + v3** |
 | Architecture | universal (pure Java, no native libs → all ABIs) |
-| Footprint | **49 activities · 4 services** · 63 Java sources · 77 drawable resources |
+| Footprint | **50 activities · 4 services** · 69 Java sources · 121 drawable resources |
+| Database | **SQLite** (`nirixx.db`, offline-first, zero third-party deps) |
 | Dependencies | zero third-party libraries — Android framework only (no AndroidX) |
-| Build | one command: `bash build.sh` (~95 s, hermetic, offline) |
+| Build | one command: `bash build.sh` (~2 min, hermetic, offline) |
+| Verification | `tools/verify_apk.py` → **21/21 checks PASS** |
 
 ---
 
-## 2. How we got here — full build history
+## 2. v1.4.0 — reference-UI parity + real database (current build)
+
+Driven page-by-page by the `Ridescan UI Reference Images/` folder (137 screenshots, two UDS
+session logs, the sample `TVS Ronin … _VHR.pdf` and the DMS communication captures):
+
+- **UI language now matches the reference everywhere**: white app bar (back, dark title,
+  `EMS-OBDII ●` status chip, user icon, brand tile), light-blue `#C9D8F2` section bars,
+  navy `#14276F` primary buttons, outlined input boxes, breadcrumb rows
+  (`Home » TVS Jupiter New » EMS-OBDII » IO Control`), and the **bottom session bar on every
+  screen** — document icon + session id (`vciSerial + ddMMyyyyHHmmss`), version badge
+  (`V 1.4.0`), connectivity glyph.
+- **VCI is honest now**: fictional catalogues are deleted. Login shows the VCI dropdown +
+  `ADD/PAIR VCI` link plus **Bluetooth / Wi-Fi / USB connectivity tiles**; the same three
+  interfaces drive `AddDeviceActivity` (BT scan list, Wi-Fi hotspot picker
+  `NirixiLINK_504856…`, USB OTG panel). Everything identifies as the NirixiLINK family with
+  firmware `1.07` (as in the captured session logs).
+- **Real database, not mock strings**: `db/Db.java` — SQLiteOpenHelper with roles, users,
+  vehicles (image/type/VIN-format/description), ECUs-per-vehicle (tx/rx ids, protocol,
+  emission), tests per ECU (live, IO, routine, write-DID with min/max), DTC library, flash
+  files, VHR physical items, sessions, logs, stream samples, test inputs, IUPR history,
+  VHR reports and configs (`support_number → +917969478770`, app version, last VCI, domain).
+  SQLite was chosen over MongoDB deliberately: this is an offline workshop tool — an embedded
+  DB needs no server, works with zero permissions, and is framework-built-in (no libraries).
+- **Auto VIN flow**: `10 01 → 22 F190` with the same 7F-22-response-then-62 sequence the real
+  logs show → DB lookup → matched vehicle card with **OPEN DIAGNOSTIC SECTION** /
+  **VEHICLE HEALTH REPORT**; unknown VIN → the vehicle home grid (per-vehicle card with
+  artwork, description, type, VIN format & sample).
+- **Diagnostic Section (Select ECU) page**: vehicle image from the DB, status tiles
+  (fault status, **live-streaming battery voltage**, updates), `Diagnostic` bar, ECU list
+  with green/red availability legend and Manufacturer / CAN Protocol / Emission expansion.
+- **ECU Diagnosis grid** → a dedicated page per tile, all reference-shaped:
+  Live Parameters (category dropdown + info cards with min/max), Diagnostic Trouble Codes
+  (`19 02` read / `14 FF` clear), **Write Data Identifier with encoded password**
+  (`27 01` seed → key → `27 02` → `2E` write), Input Output Control (toggle rows → `2F`),
+  ECU Flashing (conditions dialog with video gate + green call pill
+  **+91 7969478770**, 4-segment Download→Load→Flashing→Reset progress, numbered timestamped
+  logs), Routine Control, IUPR Test (primary CVN/CAL-ID/ratios + secondary form + history).
+- **Vehicle Health Report rebuilt**: tabs **DEALER | DIAGNOSTIC | IO CONTROL |
+  PHYSICAL EVALUATION | SUMMARY**, live collectors feeding a **real 2-page A4 PDF**
+  (`android.graphics.PdfDocument`) replicating the sample report: dark banner with vehicle
+  art + red slashes, dealer & vehicle info block, `I. Engine Management System` vehicle-data
+  table with Min/Max/Value/Status ✓, IO-control results, physical evaluation with photo
+  thumbs, shield + verdict shield summary page, `#NirixXCares` strip and disclaimer. PDFs
+  land in `Reports/`, are indexed in the `vhr_reports` table and listed in Reports.
+- **Session logging exactly like the product**: every screen mirrors UDS traffic through
+  `sim/UdsLog` into `Logs/<sessionId><VIN>.txt` with the reference File-Header block
+  (device, Android, app version, dealer, session id, firmware, connectivity) and
+  `yyyy-MM-dd HH:mm:ss.SSS I/: TX: --> 7E0 -> …` lines — and the same rows go to the
+  SQLite `logs` table for the Log Viewer (ALL/TX/RX/INFO filters).
+- **Extras wired in**: screen-record toggle (Account), customer-call pill (dialer intent),
+  AI assistant chat answering flashing/DTC/VCI/report/IUPR questions, File Viewer browsing
+  the real on-disk artifacts.
+
+**Install note:** v1.4.0 is signed with this repo's committed dev keystore
+(`NirixX/keystore/nirixx.jks`, alias `nirixx`). If an older NirixX build signed with a
+different local key is installed, **uninstall it first** — Android refuses mixed-signature
+updates.
+
+**CI:** `NirixX/ci/build.yml.example` is a ready GitHub Actions workflow (ubuntu runner,
+JDK 17, android-34 SDK; runs `build.sh` then `verify_apk.py` and uploads the APK artifact).
+Drop it into `.github/workflows/` to enable — this sandbox token has no `workflows`
+permission, so it cannot be committed under that path from here.
+
+---
+
+## 3. How we got here — full build history
 
 ### Phase 0 — Reference analysis (repo root)
 The repo root holds the complete reverse-engineering analysis of the reference dealer app:

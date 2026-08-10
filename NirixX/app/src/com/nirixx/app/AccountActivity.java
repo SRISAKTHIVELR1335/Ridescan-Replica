@@ -3,36 +3,42 @@ package com.nirixx.app;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 
+/** Account & session details — backed by the users/roles/configs tables. */
 public class AccountActivity extends BaseActivity {
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_screen);
         setTitle("Account Details");
-        wireBack();
         LinearLayout content = (LinearLayout) findViewById(R.id.content);
+        Session.ensureSession(this);
 
-        content.addView(Ui.section(this, "DEALER PROFILE"));
+        content.addView(Ui.sectionBar(this, "DEALER PROFILE", null));
         LinearLayout card = Ui.card(this);
         card.addView(Ui.kvRow(this, "Dealership", Session.dealerName, false));
-        card.addView(Ui.kvRow(this, "Dealer Code", "NRX-TN-CHE-0417", false));
+        card.addView(Ui.kvRow(this, "Dealer Code", Session.dealerCode, false));
         card.addView(Ui.kvRow(this, "Email", Session.dealerEmail.length() > 0 ? Session.dealerEmail : "—", false));
-        card.addView(Ui.kvRow(this, "Branch", "Chennai — Anna Salai", false));
-        card.addView(Ui.kvRow(this, "Designation", "Senior Technician", true));
+        card.addView(Ui.kvRow(this, "Branch ID", Session.dealerBranch.length() > 0 ? Session.dealerBranch : "—", false));
+        card.addView(Ui.kvRow(this, "Phone", Session.dealerPhone.length() > 0 ? Session.dealerPhone : "—", false));
+        card.addView(Ui.kvRow(this, "Designation", Session.userType, true));
         content.addView(card);
 
-        content.addView(Ui.section(this, "APPLICATION"));
+        content.addView(Ui.sectionBar(this, "APPLICATION & SESSION", null));
         LinearLayout app = Ui.card(this);
-        app.addView(Ui.kvRow(this, "Version", "1.3.4 (build 8)", false));
+        app.addView(Ui.kvRow(this, "App Version", "1.4.0 (build 9)", false));
         app.addView(Ui.kvRow(this, "Signed in as", Session.userType, false));
-        app.addView(Ui.kvRow(this, "VCI Firmware", Session.vciFw, false));
-        app.addView(Ui.kvRow(this, "Flash config", "flash_variant.json · bundled", true));
+        app.addView(Ui.kvRow(this, "Session ID", Session.sessionKey == null ? "—" : Session.sessionKey, false));
+        app.addView(Ui.kvRow(this, "Connectivity", Session.connectivity, false));
+        app.addView(Ui.kvRow(this, "VCI", Session.vciConnected
+                ? (Session.vciName + "  ·  fw " + Session.vciFw) : "Not connected", false));
+        app.addView(Ui.kvRow(this, "Vehicle", Session.selectedVehicle + "  ·  " + Session.selectedVin, true));
         content.addView(app);
 
-        content.addView(Ui.section(this, "MORE TOOLS"));
+        content.addView(Ui.sectionBar(this, "MORE TOOLS", null));
         Object[][] tools = new Object[][]{
             {"Dealer Information", DealerInformationActivity.class},
             {"File Viewer", FileViewerActivity.class},
@@ -50,43 +56,38 @@ public class AccountActivity extends BaseActivity {
             content.addView(row);
         }
 
-        android.widget.Button session = new android.widget.Button(this);
-        session.setText(ScreenRecordOverlayService.recording ? "Stop Session Recording" : "Start Session Recording");
-        session.setTextColor(0xFF0B8376);
-        session.setAllCaps(false);
-        session.setTextSize(14.5f);
-        session.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        session.setBackgroundResource(R.drawable.bg_button_outline);
-        LinearLayout.LayoutParams recp = new LinearLayout.LayoutParams(-1, Ui.dp(this, 46));
-        recp.setMargins(0, Ui.dp(this, 6), 0, 0);
-        content.addView(session, recp);
-        session.setOnClickListener(new View.OnClickListener() {
+        final TextView rec = Ui.navyBtn(this, ScreenRecordOverlayService.recording
+                ? "Stop Session Recording" : "Start Session Recording");
+        rec.setBackgroundResource(R.drawable.bg_box_outline);
+        rec.setTextColor(0xFF14276F);
+        LinearLayout.LayoutParams recp = new LinearLayout.LayoutParams(-1, Ui.dp(this, 48));
+        recp.setMargins(0, Ui.dp(this, 12), 0, 0);
+        content.addView(rec, recp);
+        rec.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 android.content.Intent it = new android.content.Intent(AccountActivity.this, ScreenRecordOverlayService.class);
                 if (!ScreenRecordOverlayService.recording) {
                     startService(it);
-                    ((android.widget.Button) v).setText("Stop Session Recording");
+                    rec.setText("Stop Session Recording");
                     toast("Screen recording started (overlay service)");
                 } else {
                     it.setAction("stop");
                     startService(it);
-                    ((android.widget.Button) v).setText("Start Session Recording");
-                    toast("Recording saved — see File Viewer");
+                    rec.setText("Start Session Recording");
+                    toast("Recording stopped — session stored");
                 }
             }
         });
 
-        Button out = new Button(this);
-        out.setText("Logout");
-        out.setTextColor(0xFFFFFFFF);
-        out.setAllCaps(false);
+        TextView out = Ui.navyBtn(this, "Logout");
         out.setBackgroundResource(R.drawable.bg_button_red);
         LinearLayout.LayoutParams op = new LinearLayout.LayoutParams(-1, Ui.dp(this, 48));
-        op.setMargins(0, Ui.dp(this, 8), 0, 0);
+        op.setMargins(0, Ui.dp(this, 10), 0, Ui.dp(this, 8));
         content.addView(out, op);
         out.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                Ui.dialog(AccountActivity.this, "Logout?", "You will need to sign in again to use diagnostic functions.",
+                Ui.dialog(AccountActivity.this, "Logout?",
+                        "You will need to sign in again to use diagnostic functions.",
                         "Logout", new Runnable() {
                             public void run() {
                                 Session.dealerEmail = "";

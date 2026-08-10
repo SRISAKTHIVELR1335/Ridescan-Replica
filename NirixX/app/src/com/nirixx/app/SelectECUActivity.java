@@ -1,49 +1,176 @@
 package com.nirixx.app;
 
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.TextView;
+import com.nirixx.app.db.Db;
+import com.nirixx.app.sim.SimEcu;
+import java.util.List;
 
+/** Diagnostic Section page (reference "Select ECU"): vehicle image from the DB,
+ *  live battery-voltage stream, DTC status and update tiles, then the ECU list
+ *  with availability dots and expandable Manufacturer/Protocol/Emission. */
 public class SelectECUActivity extends BaseActivity {
 
-    private static final String[][] ECUS = {
-        {"EMS — Sedemac (UDS)", "EMS", "Engine Management System · BSVI · ISO 14229"},
-        {"ABS — Continental MK100", "ABS", "Anti-lock Braking · 1-channel"},
-        {"EMS-OBDII — Mikuni CAN", "EMS-OBDII", "OBD Stage II · CAN KWP2000"},
-        {"TPMS — Pricol", "TPMS", "Tyre Pressure Monitoring System"},
-        {"Keyless ECU", "KEYLESS", "Smart Key / Keyless Go Controller"},
-        {"Instrument Cluster U732 TFT", "CLUSTER", "Connected Cluster · TFT Display"},
-    };
+    private TextView batt;
+    private final Handler h = new Handler();
+    private boolean tick = true;
+    private Db db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_screen);
         setTitle("Select ECU");
-        wireBack();
+        db = Db.get(this);
+        content();
+        streamVolts();
+    }
+
+    private void content() {
         LinearLayout content = (LinearLayout) findViewById(R.id.content);
+        content.removeAllViews();
+        Db.Vehicle v = db.vehicle(Session.vehicleId);
 
-        LinearLayout veh = Ui.card(this);
-        android.widget.TextView t = Ui.tv(this, Session.selectedVehicle, 16f, 0xFF141B2E, true);
-        android.widget.TextView s = Ui.tv(this, "VIN: " + Session.selectedVin, 12.5f, 0xFF5A6472, false);
-        s.setPadding(0, Ui.dp(this, 4), 0, 0);
-        veh.addView(t);
-        veh.addView(s);
-        content.addView(veh);
+        // ---- grey panel: vehicle image + status tiles ---------------------
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.HORIZONTAL);
+        panel.setBackgroundResource(R.drawable.bg_card_grey);
+        panel.setPadding(Ui.dp(this, 12), Ui.dp(this, 12), Ui.dp(this, 12), Ui.dp(this, 12));
 
-        content.addView(Ui.section(this, "CHOOSE ECU TO DIAGNOSE"));
-        for (int i = 0; i < ECUS.length; i++) {
-            final String[] ecu = ECUS[i];
-            int icon = i == 0 ? R.drawable.ecuf : (i == 3 ? R.drawable.battery : (i == 4 ? R.drawable.keyless_ecu_ic : R.drawable.vci));
-            LinearLayout row = Ui.listRow(this, icon, ecu[0], ecu[2], true);
-            row.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    Session.selectedEcu = ecu[0];
-                    Session.selectedEcuShort = ecu[1];
-                    go(ECUDiagnosisActivity.class);
+        LinearLayout left = new LinearLayout(this);
+        left.setOrientation(LinearLayout.VERTICAL);
+        left.setGravity(android.view.Gravity.CENTER);
+        ImageView iv = new ImageView(this);
+        iv.setImageResource(Ui.imgRes(this, v != null ? v.image : Session.vehicleImage));
+        left.addView(iv, new LinearLayout.LayoutParams(Ui.dp(this, 150), Ui.dp(this, 120)));
+        left.addView(Ui.tv(this, v != null ? v.model : Session.selectedVehicle, 13.5f, 0xFF1A2138, true));
+        panel.addView(left, new LinearLayout.LayoutParams(0, -2, 1.15f));
+
+        LinearLayout tiles = new LinearLayout(this);
+        tiles.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout dtc = Ui.statTile(this, R.drawable.ic_engine,
+                Session.faultsFound ? "Fault Codes Found" : "Faults Codes Not Found",
+                Session.faultsFound ? "Tap DTC tile to review" : "All systems clean");
+        ((TextView) dtc.getTag()).setTextColor(Session.faultsFound ? 0xFFE53935 : 0xFF2E9E43);
+        LinearLayout.LayoutParams m = new LinearLayout.LayoutParams(-1, -2);
+        m.setMargins(0, 0, 0, Ui.dp(this, 8));
+        tiles.addView(dtc, m);
+        LinearLayout b = Ui.statTile(this, R.drawable.ic_battery_sm, "Battery Voltage",
+                String.format("%.6f V", Session.batteryVolts));
+        batt = (TextView) b.getTag();
+        tiles.addView(b, new LinearLayout.LayoutParams(m));
+        tiles.addView(Ui.statTile(this, R.drawable.ic_refresh, "New Updates", "Available"),
+                new LinearLayout.LayoutParams(m));
+        panel.addView(tiles, new LinearLayout.LayoutParams(0, -2, 1f));
+        LinearLayout.LayoutParams pp = new LinearLayout.LayoutParams(-1, -2);
+        pp.setMargins(0, 0, 0, Ui.dp(this, 10));
+        content.addView(panel, pp);
+
+        dtc.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v2) {
+                go(ECUDiagnosisActivity.class);
+            }
+        });
+
+        // ---- Diagnostic bar + ECU list ------------------------------------
+        content.addView(Ui.sectionBar(this, "Diagnostic", null));
+
+        LinearLayout listCard = new LinearLayout(this);
+        listCard.setOrientation(LinearLayout.VERTICAL);
+        listCard.setBackgroundResource(R.drawable.bg_card);
+        listCard.setPadding(Ui.dp(this, 14), Ui.dp(this, 14), Ui.dp(this, 14), Ui.dp(this, 6));
+        listCard.addView(Ui.tv(this, "Select ECU", 15.5f, 0xFF1A2138, true));
+
+        LinearLayout legend = new LinearLayout(this);
+        legend.setOrientation(LinearLayout.HORIZONTAL);
+        legend.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        legend.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 8));
+        legend.addView(Ui.dot(this, true));
+        legend.addView(Ui.tv(this, " ECU is Available      ", 12.5f, 0xFF5A6472, false));
+        legend.addView(Ui.dot(this, false));
+        legend.addView(Ui.tv(this, " Bad Communication", 12.5f, 0xFF5A6472, false));
+        listCard.addView(legend);
+
+        List<Db.Ecu> ecus = db.ecus(Session.vehicleId);
+        int i = 0;
+        for (final Db.Ecu e : ecus) {
+            final boolean ok = Session.vciConnected || e.sort <= 2;   // demo: first two always comm
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.VERTICAL);
+            row.setBackgroundResource(R.drawable.bg_card_grey);
+            row.setPadding(Ui.dp(this, 12), Ui.dp(this, 10), Ui.dp(this, 12), Ui.dp(this, 10));
+
+            LinearLayout head = new LinearLayout(this);
+            head.setOrientation(LinearLayout.HORIZONTAL);
+            head.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            ImageView ic = new ImageView(this);
+            ic.setImageResource(e.code.startsWith("EMS") ? R.drawable.ic_engine
+                    : e.code.startsWith("ICM") ? R.drawable.ic_monitor
+                    : e.code.startsWith("BABS") ? R.drawable.ic_shield : R.drawable.ic_chip);
+            head.addView(ic, new LinearLayout.LayoutParams(Ui.dp(this, 26), Ui.dp(this, 26)));
+            head.addView(Ui.tv(this, "  " + e.name, 13.5f, 0xFF1A2138, true),
+                    new LinearLayout.LayoutParams(0, -2, 1f));
+            head.addView(Ui.dot(this, ok));
+            TextView chev = Ui.tv(this, "\u203A", 22f, 0xFF3A4663, true);
+            chev.setPadding(Ui.dp(this, 8), 0, 0, 0);
+            head.addView(chev);
+            row.addView(head);
+
+            final LinearLayout detail = new LinearLayout(this);
+            detail.setOrientation(LinearLayout.HORIZONTAL);
+            detail.setVisibility(View.GONE);
+            detail.setPadding(0, Ui.dp(this, 8), 0, 0);
+            detail.addView(Ui.tv(this, "Manufacturer\n" + (e.manufacturer != null ? e.manufacturer : "—"),
+                    12.5f, 0xFF5A6472, false), new LinearLayout.LayoutParams(0, -2, 1f));
+            detail.addView(Ui.tv(this, "Protocol\n" + e.protocol, 12.5f, 0xFF3A4663, true),
+                    new LinearLayout.LayoutParams(0, -2, 1f));
+            detail.addView(Ui.tv(this, "Emission\n" + e.emission, 12.5f, 0xFF3A4663, true),
+                    new LinearLayout.LayoutParams(0, -2, 1f));
+            row.addView(detail);
+
+            head.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v2) {
+                    if (detail.getVisibility() == View.GONE) {
+                        detail.setVisibility(View.VISIBLE);
+                    } else {
+                        openEcu(e);
+                    }
                 }
             });
-            content.addView(row);
+            chev.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v2) { openEcu(e); }
+            });
+
+            LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-1, -2);
+            rp.setMargins(0, 0, 0, Ui.dp(this, 8));
+            listCard.addView(row, rp);
         }
+        content.addView(listCard);
     }
+
+    private void openEcu(Db.Ecu e) {
+        Session.selectEcu(e.id, e.name, e.code, e.tx, e.rx);
+        Session.selectedFlashFile = db.flashFile(e.id);
+        go(ECUDiagnosisActivity.class);
+    }
+
+    private void streamVolts() {
+        h.postDelayed(new Runnable() {
+            public void run() {
+                if (!tick) return;
+                if (batt != null) batt.setText(String.format("%.6f V", SimEcu.nextVolts()));
+                h.postDelayed(this, 1000);
+            }
+        }, 1000);
+    }
+
+    @Override
+    protected void onResume() { super.onResume(); tick = true; streamVolts(); }
+
+    @Override
+    protected void onPause() { tick = false; super.onPause(); }
 }

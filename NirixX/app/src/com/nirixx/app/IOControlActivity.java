@@ -2,68 +2,65 @@ package com.nirixx.app;
 
 import android.os.Bundle;
 import android.os.Handler;
-import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.LinearLayout;
-import android.widget.Switch;
-import android.widget.TextView;
+import com.nirixx.app.db.Db;
+import com.nirixx.app.sim.UdsLog;
+import java.util.List;
 
+/** Input Output Control (reference): toggle rows inside a card — each toggle
+ *  actuates the output over UDS IOControl (2F) and the Ok/result is collected
+ *  for the Vehicle Health Report and stored as a test input. */
 public class IOControlActivity extends BaseActivity {
 
-    private static final String[] ACTUATORS = {
-        "Fuel Pump Relay", "Injector — Cylinder 1", "Ignition Coil",
-        "Cooling Fan", "Malfunction Indicator Lamp (MIL)", "EVAP Purge Valve"
-    };
+    private final Handler h = new Handler();
+    private Db db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_screen);
-        setTitle("IO Control — " + Session.selectedEcuShort);
-        wireBack();
+        setTitle("IO Control");
+        showEcuChip(Session.selectedEcuCode, true);
+        db = Db.get(this);
+        Session.ensureSession(this);
+
         LinearLayout content = (LinearLayout) findViewById(R.id.content);
+        content.removeAllViews();
+        content.addView(Ui.crumbs(this, new String[]{"Home", Session.selectedVehicle,
+                Session.selectedEcuCode, "IO Control"}));
 
-        content.addView(Ui.section(this, "ACTUATOR TESTS (UDS 0x2F — INPUTOUTPUTCONTROLBYIDENTIFIER)"));
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackgroundResource(R.drawable.bg_card);
+        card.setPadding(Ui.dp(this, 12), Ui.dp(this, 12), Ui.dp(this, 12), Ui.dp(this, 2));
 
-        for (int i = 0; i < ACTUATORS.length; i++) {
-            final String name = ACTUATORS[i];
-            LinearLayout card = Ui.card(this);
-            LinearLayout top = new LinearLayout(this);
-            top.setOrientation(LinearLayout.HORIZONTAL);
-            top.setGravity(android.view.Gravity.CENTER_VERTICAL);
-            top.addView(Ui.tv(this, name, 14.5f, 0xFF141B2E, true), new LinearLayout.LayoutParams(0, -2, 1f));
-            final Switch sw = new Switch(this);
-            top.addView(sw);
-            card.addView(top);
-            final TextView status = Ui.tv(this, "INACTIVE", 11.5f, 0xFF5A6472, true);
-            status.setPadding(0, Ui.dp(this, 4), 0, 0);
-            card.addView(status);
-
-            sw.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                public void onCheckedChanged(CompoundButton btn, boolean on) {
-                    status.setText(on ? "ACTIVE — actuator energised" : "INACTIVE");
-                    status.setTextColor(on ? 0xFF1E7A46 : 0xFF5A6472);
-                    if (on) {
-                        toast(name + ": activation requested");
-                        new Handler().postDelayed(new Runnable() {
-                            public void run() {
-                                if (sw.isChecked()) {
-                                    sw.setChecked(false);
-                                    status.setText("AUTO-OFF after 5 s (safety)");
-                                }
-                            }
-                        }, 5000);
-                    }
-                }
-            });
-            content.addView(card);
+        List<Db.TestDef> ios = db.tests(Session.ecuId, "io");
+        for (final Db.TestDef t : ios) {
+            LinearLayout row = Ui.ioRow(this, t.name.toUpperCase(),
+                    new CompoundButton.OnCheckedChangeListener() {
+                        public void onCheckedChanged(CompoundButton button, boolean isChecked) {
+                            UdsLog.log(IOControlActivity.this, "TX",
+                                    Session.ecuTx + " -> 2F10" + String.format("%02X", t.sort) + (isChecked ? "03" : "00"));
+                            UdsLog.log(IOControlActivity.this, "RX", Session.ecuRx + " -> 6F1003");
+                            String verdict = "Ok";
+                            Session.vhrData.put("io|" + Session.selectedEcuCode + "|" + t.name, verdict);
+                            db.putInput(Session.sessionKey, "io",
+                                    Session.selectedEcuCode + "|" + t.name, verdict);
+                            toast(t.name + (isChecked ? " actuated — Ok" : " released"));
+                        }
+                    });
+            card.addView(row);
         }
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.setMargins(0, 0, 0, Ui.dp(this, 8));
+        content.addView(card, lp);
 
-        TextView note = Ui.tv(this,
-                "Caution: actuator tests are momentary. Verify DTCs and re-run live parameters after IO tests.",
-                12f, 0xFF5A6472, false);
-        note.setBackgroundResource(R.drawable.bg_card);
-        note.setPadding(Ui.dp(this, 14), Ui.dp(this, 12), Ui.dp(this, 14), Ui.dp(this, 12));
+        LinearLayout note = Ui.card(this);
+        note.addView(Ui.tv(this,
+                "Actuations run for a bounded time and are echoed to the session log. "
+                        + "Results feed the IO CONTROL tab of the Vehicle Health Report.",
+                12.5f, 0xFF5A6472, false));
         content.addView(note);
     }
 }

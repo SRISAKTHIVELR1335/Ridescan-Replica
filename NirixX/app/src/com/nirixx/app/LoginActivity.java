@@ -1,106 +1,135 @@
 package com.nirixx.app;
 
-import android.app.Dialog;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Bundle;
-import android.text.InputType;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
 import android.widget.EditText;
-import android.widget.LinearLayout;
+import android.widget.TextView;
+import com.nirixx.app.db.Db;
 
+/** Dealer login — mirrors the reference flow: Dealer ID auto-fills email/branch
+ *  from the users table, designation & VCI pickers, connectivity selector,
+ *  then a session row is opened in the database. */
 public class LoginActivity extends BaseActivity {
-    private EditText edtEmail, edtPin;
+
+    private EditText edtDealer, edtEmail, edtBranch;
+    private TextView spnRole, spnVci, btnLogin;
+    private View conBT, conWIFI, conUSB;
+    private String connectivity = "BLUETOOTH";
+    private String role = "Service Technician";
+    private String vci = "NirixiLINK_504856";
+    private Db db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getWindow().setStatusBarColor(0xFFB7C4D0);
-        if (android.os.Build.VERSION.SDK_INT >= 23) {
-            getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
-        }
         setContentView(R.layout.activity_login);
+        db = Db.get(this);
+
+        edtDealer = (EditText) findViewById(R.id.edtDealer);
         edtEmail = (EditText) findViewById(R.id.edtEmail);
-        edtPin = (EditText) findViewById(R.id.edtPin);
+        edtBranch = (EditText) findViewById(R.id.edtBranch);
+        spnRole = (TextView) findViewById(R.id.spnRole);
+        spnVci = (TextView) findViewById(R.id.spnVci);
+        btnLogin = (TextView) findViewById(R.id.btnLogin);
+        conBT = findViewById(R.id.conBT);
+        conWIFI = findViewById(R.id.conWIFI);
+        conUSB = findViewById(R.id.conUSB);
 
-        findViewById(R.id.btnLogin).setOnClickListener(new View.OnClickListener() {
+        vci = db.config("last_vci", vci);
+        spnVci.setText(vci);
+        connectivity = db.config("connectivity", "BLUETOOTH");
+        markConnectivity();
+
+        // Dealer-ID -> auto-fill from users table, like the DMS lookup.
+        edtDealer.addTextChangedListener(new TextWatcher() {
+            public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
+            public void onTextChanged(CharSequence s, int a, int b, int c) { }
+            public void afterTextChanged(Editable s) {
+                String[] u = db.userByDealerCode(s.toString().trim());
+                if (u != null) {
+                    edtEmail.setText(u[2]);
+                    edtBranch.setText(u[3]);
+                    role = u[5];
+                    spnRole.setText(role);
+                }
+            }
+        });
+        String[] u = db.userByDealerCode(edtDealer.getText().toString().trim());
+        if (u != null) { edtEmail.setText(u[2]); edtBranch.setText(u[3]); role = u[5]; spnRole.setText(role); }
+
+        spnRole.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                String email = edtEmail.getText().toString().trim();
-                String pin = edtPin.getText().toString().trim();
-                if (email.length() == 0 || !email.contains("@")) { toast("Enter a valid Email ID"); return; }
-                if (pin.length() < 4) { toast("Enter your 4-digit PIN"); return; }
-                Session.dealerEmail = email;
-                final Dialog d = Ui.progressDialog(LoginActivity.this, "Authenticating…");
-                d.show();
-                edtEmail.postDelayed(new Runnable() {
-                    public void run() { d.dismiss(); go(HomeActivity.class); finish(); }
-                }, 900);
+                final java.util.List<String> roles = db.roles();
+                new AlertDialog.Builder(LoginActivity.this)
+                        .setTitle("Designation")
+                        .setItems(roles.toArray(new String[roles.size()]),
+                                new DialogInterface.OnClickListener() {
+                                    public void onClick(DialogInterface d, int which) {
+                                        role = roles.get(which);
+                                        spnRole.setText(role);
+                                    }
+                                }).show();
             }
         });
 
-        findViewById(R.id.txtForgotPin).setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                String e = edtEmail.getText().toString().trim();
-                if (e.length() > 0) Session.dealerEmail = e;
-                go(OtpActivity.class);
-            }
+        spnVci.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { go(AddDeviceActivity.class); }
+        });
+        findViewById(R.id.txtAddPair).setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { go(AddDeviceActivity.class); }
         });
 
-        findViewById(R.id.btnSso).setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { go(SsoLoginActivity.class); }
-        });
-        findViewById(R.id.txtRegister).setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { go(RegisterActivity.class); }
+        View.OnClickListener connClick = new View.OnClickListener() {
+            public void onClick(View v) {
+                connectivity = v == conBT ? "BLUETOOTH" : (v == conWIFI ? "WIFI" : "USB");
+                db.setConfig("connectivity", connectivity);
+                markConnectivity();
+            }
+        };
+        conBT.setOnClickListener(connClick);
+        conWIFI.setOnClickListener(connClick);
+        conUSB.setOnClickListener(connClick);
+
+        btnLogin.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { login(); }
         });
     }
 
-    private void showForgotPin() {
-        final Dialog d = new Dialog(this);
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundResource(R.drawable.bg_dialog);
-        int p = Ui.dp(this, 22);
-        root.setPadding(p, p, p, Ui.dp(this, 16));
-        root.addView(Ui.tv(this, "Reset PIN", 17, 0xFF141B2E, true));
-        root.addView(Ui.tv(this, "An OTP has been sent to your registered email.", 13, 0xFF5A6472, false));
+    private void markConnectivity() {
+        conBT.setBackgroundResource("BLUETOOTH".equals(connectivity) ? R.drawable.bg_tile_sel : R.drawable.bg_tile_def);
+        conWIFI.setBackgroundResource("WIFI".equals(connectivity) ? R.drawable.bg_tile_sel : R.drawable.bg_tile_def);
+        conUSB.setBackgroundResource("USB".equals(connectivity) ? R.drawable.bg_tile_sel : R.drawable.bg_tile_def);
+    }
 
-        final EditText otp = new EditText(this);
-        otp.setHint("Enter OTP (e.g. 482913)");
-        otp.setInputType(InputType.TYPE_CLASS_NUMBER);
-        otp.setBackgroundResource(R.drawable.bg_edittext);
-        otp.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 12), 0);
-        LinearLayout.LayoutParams op = new LinearLayout.LayoutParams(-1, Ui.dp(this, 46));
-        op.setMargins(0, Ui.dp(this, 14), 0, 0);
-        root.addView(otp, op);
-
-        final EditText np = new EditText(this);
-        np.setHint("New 4-Digit PIN");
-        np.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
-        np.setBackgroundResource(R.drawable.bg_edittext);
-        np.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 12), 0);
-        LinearLayout.LayoutParams npp = new LinearLayout.LayoutParams(-1, Ui.dp(this, 46));
-        npp.setMargins(0, Ui.dp(this, 10), 0, 0);
-        root.addView(np, npp);
-
-        android.widget.Button b = new android.widget.Button(this);
-        b.setText("Reset PIN");
-        b.setTextColor(0xFFFFFFFF);
-        b.setBackgroundResource(R.drawable.bg_button_blue);
-        b.setAllCaps(false);
-        LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(-1, Ui.dp(this, 46));
-        bp.setMargins(0, Ui.dp(this, 16), 0, 0);
-        root.addView(b, bp);
-        b.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (otp.getText().toString().trim().length() < 6) { toast("Enter the 6-digit OTP"); return; }
-                if (np.getText().toString().trim().length() < 4) { toast("PIN must be 4 digits"); return; }
-                d.dismiss();
-                toast("PIN reset successful");
-            }
-        });
-        d.setContentView(root);
-        if (d.getWindow() != null) {
-            d.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
-            d.getWindow().setLayout(Ui.dp(this, 305), android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+    private void login() {
+        final String code = edtDealer.getText().toString().trim();
+        final String[] u = db.userByDealerCode(code);
+        if (u == null) {
+            Ui.dialog(this, "Unknown Dealer ID",
+                    "Dealer ID \"" + code + "\" is not in the NirixX directory.\n\n"
+                            + "Seeded directory entries:\n• 10814 — NEO MOTORS (Service Manager)\n"
+                            + "• 12345 — RAJIV P (Service Technician)",
+                    "OK", null, null, null).show();
+            return;
         }
-        d.show();
+        Session.dealerCode = code;
+        Session.dealerName = u[1];
+        Session.dealerEmail = edtEmail.getText().toString().trim();
+        Session.dealerBranch = edtBranch.getText().toString().trim();
+        Session.dealerPhone = u[4];
+        Session.userType = role;
+        Session.connectivity = connectivity;
+        Session.vciName = vci;
+        Session.sessionKey = null;            // fresh session per login
+        Session.ensureSession(this);
+        db.setConfig("last_vci", vci);
+        toast("Signed in as " + u[1] + " · " + role);
+        startActivity(new Intent(this, HomeActivity.class));
+        finish();
     }
 }

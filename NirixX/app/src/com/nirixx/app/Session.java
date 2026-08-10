@@ -1,38 +1,98 @@
 package com.nirixx.app;
 
+import android.content.Context;
+import com.nirixx.app.db.Db;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
-/** Static app state shared across screens (mock DMS/VCI session). */
+/** Static app state shared across screens — bound to the SQLite database via Db. */
 public final class Session {
     private Session() {}
 
+    // ---- signed-in dealer (users/roles tables) ----
     public static String dealerEmail = "";
-    public static String dealerName = "SR Sakthi Motors — Chennai";
+    public static String dealerName = "NEO MOTORS";
+    public static String dealerCode = "10814";
+    public static String dealerBranch = "10814";
+    public static String dealerPhone = "";
+    public static String userType = "Service Technician";
 
+    // ---- VCI (connection is always one of BT / WIFI / USB) ----
     public static boolean vciConnected = false;
     public static String vciName = "";
-    public static String vciFw = "2.14.0";
+    public static String vciFw = "1.07";
+    public static String connectivity = "BLUETOOTH";   // BLUETOOTH | WIFI | USB
+    public static String vciSerial = "504856";
 
-    public static String selectedVin = "MD634NF4XRCL12345";
+    // ---- current vehicle / ECU selection (vehicles/ecus tables) ----
+    public static long vehicleId = 2;                  // Ronin default row
+    public static String selectedVin = "MD637AN11R2D01275";
     public static String selectedVehicle = "TVS Ronin";
-    public static String selectedVariant = "RR310_REFRESH";
-    public static String selectedEcu = "EMS — Sedemac (UDS)";
+    public static String selectedVariant = "RONIN225_BSVI";
+    public static String vehicleType = "Cruiser";
+    public static String vehicleImage = "veh_cruiser";
+    public static long ecuId = 4;                      // Ronin EMS row
+    public static String selectedEcu = "ENGINE MANAGEMENT SYSTEM (OBDII)";
+    public static String selectedEcuCode = "EMS-OBDII";
     public static String selectedEcuShort = "EMS";
-    public static String selectedFlashFile = "RR310_REFRESH_NEW";
+    public static String selectedFlashFile = "K6060799_03_S.mot";
+    public static String ecuTx = "7E0";
+    public static String ecuRx = "7E8";
 
+    // ---- diagnostic run state ----
     public static int dtcsCleared = 0;
+    public static boolean faultsFound = false;
     public static boolean reportGenerated = false;
-    public static String userType = "Service Technician";
     public static String odometer = "—";
+    public static double batteryVolts = 12.51;
 
+    /** Live VHR collector: kind|key -> value (io results, physical answers, dealer tab…). */
+    public static final Map<String, String> vhrData = new LinkedHashMap<String, String>();
+
+    /** Session key in the store format: <vciSerial><ddMMyyyyHHmmss>, e.g. 50485617032026113515. */
+    public static String sessionKey = null;
+
+    public static String ensureSession(Context c) {
+        if (sessionKey == null) {
+            String ts = new SimpleDateFormat("ddMMyyyyHHmmss", Locale.US).format(new Date());
+            sessionKey = vciSerial + ts;
+            Db.get(c).saveSession(sessionKey, vehicleId, selectedVin,
+                    System.currentTimeMillis(), connectivity, vciFw, vciName);
+        }
+        return sessionKey;
+    }
+
+    public static void selectVehicle(long id, String model, String variant, String type,
+                                     String vinSample, String image) {
+        vehicleId = id;
+        selectedVehicle = model;
+        selectedVariant = variant;
+        vehicleType = type;
+        selectedVin = vinSample;
+        vehicleImage = image;
+    }
+
+    public static void selectEcu(long id, String name, String code, String tx, String rx) {
+        ecuId = id;
+        selectedEcu = name;
+        selectedEcuCode = code;
+        selectedEcuShort = code.contains("-") ? code.substring(0, code.indexOf('-')) : code;
+        ecuTx = tx;
+        ecuRx = rx;
+    }
+
+    /** Legacy stub data still used by a few secondary screens. */
     public static final List<String[]> vehicles = new ArrayList<String[]>();
     static {
-        vehicles.add(new String[]{"TVS Ronin 225", "RR310_REFRESH · BSVI", "MD634NF4XRCL12345", "Today 09:41"});
-        vehicles.add(new String[]{"TVS Apache RTR 160 4V", "RTR160_4V_1CH_EFI_BSVI · BSVI", "MD634KE21XRCA83412", "Yesterday"});
-        vehicles.add(new String[]{"TVS Raider 125", "RTR160_2V_1CH_EFI_BABS_BSVI · BSVI", "MD634HG25XRCK66108", "Mon 11:05"});
-        vehicles.add(new String[]{"TVS NTORQ 125", "NTQ125_EFI_BSVI · BSVI", "MD634BC18XRCZ90214", "Sat 16:22"});
-        vehicles.add(new String[]{"TVS Jupiter 110", "JUP110_ISG_BSVI · BSVI", "MD634JP15XRCT15542", "Fri 10:17"});
+        vehicles.add(new String[]{"TVS Ronin", "RONIN225_BSVI · BSVI", "MD637AN11R2D01275", "Today 09:41"});
+        vehicles.add(new String[]{"TVS Apache RTR 160 4V", "RTR160_4V_1CH_EFI_BSVI · BSVI", "MD625AF95S2H26963", "Yesterday"});
+        vehicles.add(new String[]{"TVS Jupiter New", "JUP125_ISG_BSVI · BSVI", "MD626EG55S1B37997", "Mon 11:05"});
+        vehicles.add(new String[]{"TVS XL 100", "XL100_KLINE_OBD1 · K-Line", "MD621BP23T1D02028", "Sat 16:22"});
     }
 
     public static final String[][] DTC_DATA = new String[][]{

@@ -1,128 +1,342 @@
 package com.nirixx.app;
 
-import android.app.Dialog;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
+import android.text.InputType;
 import android.view.View;
+import android.widget.EditText;
+import android.widget.HorizontalScrollView;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import com.nirixx.app.db.Db;
+import com.nirixx.app.sim.SimEcu;
+import com.nirixx.app.sim.UdsLog;
+import java.util.ArrayList;
+import java.util.List;
 
+/** Vehicle Health Report — the reference tabbed wizard:
+ *  DEALER | DIAGNOSTIC | IO CONTROL | PHYSICAL EVALUATION | SUMMARY.
+ *  User-entered answers are stored as test inputs; the SUMMARY tab generates
+ *  the MotoShield-style PDF report. */
 public class VhrActivity extends BaseActivity {
-    private static final String[] TABS = {"Dealer Information", "Diagnostic Report", "IO Control", "Summary"};
-    private LinearLayout strip, body;
+
+    private static final String[] TABS = {"DEALER", "DIAGNOSTIC", "IO CONTROL", "PHYSICAL EVALUATION", "SUMMARY"};
+    private int tab = 0;
+    private LinearLayout content, host;
     private final TextView[] tabViews = new TextView[TABS.length];
+    private Db db;
+    private Db.Vehicle vehicle;
+    private final Handler h = new Handler();
+    private final List<double[]> ranges = new ArrayList<double[]>();
+    private final List<String[]> liveRows = new ArrayList<String[]>();
+    private String pdfPath = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_vhr);
-        wireBack();
-        strip = (LinearLayout) findViewById(R.id.tabStrip);
-        body = (LinearLayout) findViewById(R.id.vhrContent);
-        for (int i = 0; i < TABS.length; i++) {
-            final int idx = i;
-            TextView t = Ui.tv(this, TABS[i], 13f, 0xFF5A6472, true);
-            int h = Ui.dp(this, 12);
-            t.setPadding(h, 0, h, 0);
-            t.setGravity(android.view.Gravity.CENTER);
-            t.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) { select(idx); }
-            });
-            tabViews[i] = t;
-            strip.addView(t, new LinearLayout.LayoutParams(-2, -1));
-        }
-        select(0);
+        setContentView(R.layout.activity_screen);
+        setTitle("Vehicle Health Report");
+        db = Db.get(this);
+        Session.ensureSession(this);
+        vehicle = db.vehicle(Session.vehicleId);
+        content = (LinearLayout) findViewById(R.id.content);
+        render();
+    }
 
-        findViewById(R.id.btnExportPdf).setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                final Dialog d = Ui.progressDialog(VhrActivity.this, "Rendering PDF (iText)…");
-                d.show();
-                new Handler().postDelayed(new Runnable() {
-                    public void run() {
-                        d.dismiss();
-                        Session.reportGenerated = true;
-                        Ui.resultDialog(VhrActivity.this, R.drawable.ic_flash_success,
-                                "VHR Generated", "VehicleHealthReport_" + Session.selectedVin + ".pdf\nsaved to /NirixX/Reports/",
-                                "OK", null).show();
-                    }
-                }, 1500);
-            }
+    private void render() {
+        content.removeAllViews();
+
+        // tab strip (scrollable like the reference)
+        HorizontalScrollView hs = new HorizontalScrollView(this);
+        hs.setHorizontalScrollBarEnabled(false);
+        LinearLayout strip = new LinearLayout(this);
+        strip.setOrientation(LinearLayout.HORIZONTAL);
+        strip.setPadding(Ui.dp(this, 4), 0, Ui.dp(this, 4), 0);
+        for (int i = 0; i < TABS.length; i++) {
+            final int k = i;
+            LinearLayout cell = new LinearLayout(this);
+            cell.setOrientation(LinearLayout.VERTICAL);
+            TextView t = Ui.tv(this, TABS[i], 13.5f, i == tab ? 0xFF14276F : 0xFF9AA3B4, i == tab);
+            t.setPadding(Ui.dp(this, 10), Ui.dp(this, 8), Ui.dp(this, 10), Ui.dp(this, 6));
+            cell.addView(t);
+            View under = new View(this);
+            GradientDrawable g = new GradientDrawable();
+            g.setColor(i == tab ? 0xFF14276F : 0x00000000);
+            under.setBackgroundDrawable(g);
+            cell.addView(under, new LinearLayout.LayoutParams(-1, Ui.dp(this, 3)));
+            tabViews[i] = t;
+            cell.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) { tab = k; render(); }
+            });
+            strip.addView(cell);
+        }
+        hs.addView(strip);
+        content.addView(hs);
+
+        host = new LinearLayout(this);
+        host.setOrientation(LinearLayout.VERTICAL);
+        host.setPadding(0, Ui.dp(this, 10), 0, 0);
+        content.addView(host);
+
+        switch (tab) {
+            case 0: tabDealer(); break;
+            case 1: tabDiagnostic(); break;
+            case 2: tabIoControl(); break;
+            case 3: tabPhysical(); break;
+            default: tabSummary();
+        }
+    }
+
+    private void next(String label) {
+        TextView next = Ui.navyBtn(this, label);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.setMargins(0, Ui.dp(this, 12), 0, Ui.dp(this, 10));
+        host.addView(next, lp);
+        next.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { if (tab < TABS.length - 1) { tab++; render(); } }
         });
     }
 
-    private void select(int idx) {
-        for (int i = 0; i < TABS.length; i++) {
-            tabViews[i].setTextColor(i == idx ? 0xFF0B8376 : 0xFF5A6472);
-            tabViews[i].setBackgroundResource(0);
-        }
-        tabViews[idx].setTextColor(0xFF0B8376);
-        body.removeAllViews();
-        switch (idx) {
-            case 0: dealerTab(); break;
-            case 1: diagTab(); break;
-            case 2: ioTab(); break;
-            default: summaryTab();
-        }
-    }
-
-    private void dealerTab() {
-        body.addView(Ui.section(this, "DEALER DETAILS"));
+    // ---------------------------------------------------------------- DEALER
+    private void tabDealer() {
         LinearLayout card = Ui.card(this);
-        card.addView(Ui.kvRow(this, "Dealership", Session.dealerName, false));
-        card.addView(Ui.kvRow(this, "Dealer Code", "NRX-TN-CHE-0417", false));
-        card.addView(Ui.kvRow(this, "Technician", Session.dealerEmail.length() > 0 ? Session.dealerEmail : "tech@srsakthimotors.in", false));
-        card.addView(Ui.kvRow(this, "Region", "Chennai — Tamil Nadu", false));
-        card.addView(Ui.kvRow(this, "Report Date", "09 Aug 2026, 10:14 IST", true));
-        body.addView(card);
-    }
-
-    private void diagTab() {
-        body.addView(Ui.section(this, "DIAGNOSTIC RESULTS"));
-        LinearLayout card = Ui.card(this);
-        card.addView(Ui.kvRow(this, "Vehicle", Session.selectedVehicle, false));
+        card.addView(Ui.tv(this, "DEALER & VEHICLE INFO", 14.5f, 0xFF1A2138, true));
+        card.addView(Ui.kvRow(this, "Dealer Name", Session.dealerName, false));
+        card.addView(Ui.kvRow(this, "Dealer Code", Session.dealerCode, false));
+        card.addView(Ui.kvRow(this, "Dealer Email", Session.dealerEmail.length() > 0 ? Session.dealerEmail : "—", false));
+        card.addView(Ui.kvRow(this, "Variant", vehicle != null ? vehicle.model : Session.selectedVehicle, false));
         card.addView(Ui.kvRow(this, "VIN", Session.selectedVin, false));
-        card.addView(Ui.kvRow(this, "ECU", Session.selectedEcu, false));
-        card.addView(Ui.kvRow(this, "DTCs Found", Session.dtcsCleared > 0 ? "0 (cleared)" : "5", false));
-        card.addView(Ui.kvRow(this, "Live Parameters", "8 channels monitored — nominal", false));
-        card.addView(Ui.kvRow(this, "IUPR Monitors", "READY", true));
-        body.addView(card);
+        card.addView(Ui.kvRow(this, "Odometer", Session.odometer, true));
+        host.addView(card);
+
+        LinearLayout vehicleCard = new LinearLayout(this);
+        vehicleCard.setOrientation(LinearLayout.VERTICAL);
+        vehicleCard.setBackgroundResource(R.drawable.bg_card);
+        ImageView iv = new ImageView(this);
+        iv.setImageResource(Ui.imgRes(this, Session.vehicleImage));
+        vehicleCard.addView(iv, new LinearLayout.LayoutParams(-1, Ui.dp(this, 150)));
+        host.addView(vehicleCard);
+        next("Next");
     }
 
-    private void ioTab() {
-        body.addView(Ui.section(this, "ACTUATOR TEST RESULTS"));
-        String[][] rows = new String[][]{
-            {"Fuel Pump Relay", "PASS"}, {"Injector — Cylinder 1", "PASS"},
-            {"Ignition Coil", "PASS"}, {"Cooling Fan", "PASS"},
-            {"MIL Lamp", "PASS"}, {"EVAP Purge Valve", "SKIPPED"},
-        };
-        LinearLayout card = Ui.card(this);
-        for (int i = 0; i < rows.length; i++) {
-            card.addView(Ui.kvRow(this, rows[i][0], rows[i][1], i == rows.length - 1));
+    // ---------------------------------------------------------------- DIAGNOSTIC
+    private void tabDiagnostic() {
+        liveRows.clear(); ranges.clear();
+        host.addView(Ui.tv(this, Session.selectedEcuCode.split("-")[0] + " - LIVE DATA",
+                13.5f, 0xFF5A6472, true));
+        List<Db.TestDef> defs = db.tests(Session.ecuId, "live");
+        LinearLayout table = new LinearLayout(this);
+        table.setOrientation(LinearLayout.VERTICAL);
+        table.setBackgroundResource(R.drawable.bg_box_outline);
+        int shown = 0;
+        for (final Db.TestDef t : defs) {
+            if (t.vmax == t.vmin) continue;             // identifier-strings skip the table
+            if (shown++ >= 8) break;                    // first block, like the EmS-LIVE DATA page
+            String value = SimEcu.liveValue(t);
+            boolean ok = SimEcu.inRange(t, value);
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.VERTICAL);
+            row.setBackgroundColor(0xFFEDF1F7);
+            row.setPadding(Ui.dp(this, 12), Ui.dp(this, 9), Ui.dp(this, 12), Ui.dp(this, 9));
+            LinearLayout line = new LinearLayout(this);
+            line.setOrientation(LinearLayout.HORIZONTAL);
+            TextView name = Ui.tv(this, t.name, 13.5f, 0xFF1A2138, true);
+            name.setTypeface(null, android.graphics.Typeface.BOLD_ITALIC);
+            line.addView(name, new LinearLayout.LayoutParams(0, -2, 1f));
+            TextView val = Ui.tv(this, value, 14f, ok ? 0xFF2E9E43 : 0xFFE53935, true);
+            line.addView(val);
+            row.addView(line);
+            row.addView(Ui.tv(this, "Min:  " + trim(t.vmin) + "   Max:  " + trim(t.vmax),
+                    12f, 0xFF5A6472, true));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+            lp.setMargins(0, 0, 0, Ui.dp(this, 2));
+            table.addView(row, lp);
+            liveRows.add(new String[]{t.name, trim(t.vmin), trim(t.vmax), value, ok ? "PASS" : "FAIL"});
+            Session.vhrData.put("live|" + t.name, value);
         }
-        body.addView(card);
+        host.addView(table);
+        UdsLog.log(this, "TX", Session.ecuTx + " -> 22B0FF");
+        UdsLog.log(this, "RX", Session.ecuRx + " -> 62B0FF…");
+        next("NEXT");
     }
 
-    private void summaryTab() {
-        LinearLayout head = new LinearLayout(this);
-        head.setOrientation(LinearLayout.VERTICAL);
-        head.setBackgroundResource(R.drawable.bg_card_blue);
-        int p = Ui.dp(this, 18);
-        head.setPadding(p, p, p, p);
-        LinearLayout.LayoutParams hp = new LinearLayout.LayoutParams(-1, -2);
-        hp.setMargins(0, 0, 0, Ui.dp(this, 12));
-        body.addView(head, hp);
-        TextView big = Ui.tv(this, "VEHICLE HEALTH: GOOD", 18f, 0xFF7DE3A8, true);
-        head.addView(big);
-        TextView sub = Ui.tv(this, "All systems nominal. One stored DTC cleared during this session.",
-                12.5f, 0xB3FFFFFF, false);
-        sub.setPadding(0, Ui.dp(this, 6), 0, 0);
-        head.addView(sub);
+    private static String trim(double v) {
+        return v == Math.floor(v) ? String.valueOf((long) v) : String.valueOf(v);
+    }
 
-        LinearLayout card = Ui.card(this);
-        card.addView(Ui.kvRow(this, "Overall Score", "92 / 100", false));
-        card.addView(Ui.kvRow(this, "Battery Health", "92% — GOOD", false));
-        card.addView(Ui.kvRow(this, "Emissions Readiness", "READY", false));
-        card.addView(Ui.kvRow(this, "Flash Status", Session.reportGenerated ? "UP TO DATE" : "UPDATE AVAILABLE", true));
-        body.addView(card);
+    // ---------------------------------------------------------------- IO CONTROL
+    private void tabIoControl() {
+        List<Db.Ecu> ecus = db.ecus(Session.vehicleId);
+        for (Db.Ecu e : ecus) {
+            final Db.Ecu fe = e;
+            final List<Db.TestDef> ios = db.tests(fe.id, "io");
+            if (ios.isEmpty()) continue;
+            LinearLayout card = new LinearLayout(this);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setBackgroundResource(R.drawable.bg_card);
+            card.setPadding(Ui.dp(this, 12), Ui.dp(this, 10), Ui.dp(this, 12), Ui.dp(this, 8));
+            TextView head = Ui.tv(this, e.code.split("-")[0], 15f, 0xFF1A2138, true);
+            head.setTypeface(null, android.graphics.Typeface.BOLD_ITALIC);
+            card.addView(head);
+            for (final Db.TestDef t : ios) {
+                LinearLayout row = new LinearLayout(this);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                row.setBackgroundResource(R.drawable.bg_card_grey);
+                row.setPadding(Ui.dp(this, 12), Ui.dp(this, 6), Ui.dp(this, 12), Ui.dp(this, 6));
+                row.addView(Ui.tv(this, t.name, 13.5f, 0xFF1A2138, false),
+                        new LinearLayout.LayoutParams(0, -2, 1f));
+                final TextView okv = Ui.tv(this, "—", 13f, 0xFF9AA3B4, false);
+                row.addView(okv);
+                android.widget.Switch sw = new android.widget.Switch(this);
+                row.addView(sw);
+                LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-1, -2);
+                rp.setMargins(0, Ui.dp(this, 4), 0, 0);
+                card.addView(row, rp);
+                sw.setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {
+                    public void onCheckedChanged(android.widget.CompoundButton b, boolean on) {
+                        Session.vhrData.put("io|" + fe.code + "|" + t.name, "Ok");
+                        db.putInput(Session.sessionKey, "io", fe.code + "|" + t.name, "Ok");
+                        okv.setText("Ok");
+                        okv.setTextColor(0xFF2E9E43);
+                        UdsLog.log(VhrActivity.this, "TX", fe.tx + " -> 2F10" + String.format("%02X", t.sort) + "03");
+                        UdsLog.log(VhrActivity.this, "RX", fe.rx + " -> 6F1003");
+                    }
+                });
+            }
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+            lp.setMargins(0, 0, 0, Ui.dp(this, 10));
+            host.addView(card, lp);
+        }
+        next("Next");
+    }
+
+    // ---------------------------------------------------------------- PHYSICAL EVALUATION
+    private void tabPhysical() {
+        List<String[]> items = db.vhrItems(Session.vehicleId);
+        for (final String[] it : items) {
+            final LinearLayout card = new LinearLayout(this);
+            card.setOrientation(LinearLayout.HORIZONTAL);
+            card.setBackgroundResource(R.drawable.bg_card);
+            card.setPadding(Ui.dp(this, 12), Ui.dp(this, 12), Ui.dp(this, 12), Ui.dp(this, 12));
+
+            card.addView(Ui.photoThumb(this));
+
+            LinearLayout right = new LinearLayout(this);
+            right.setOrientation(LinearLayout.VERTICAL);
+            right.addView(Ui.tv(this, it[0], 14f, 0xFF1A2138, true));
+
+            if ("VAL".equals(it[4])) {
+                LinearLayout box = new LinearLayout(this);
+                box.setOrientation(LinearLayout.HORIZONTAL);
+                box.setBackgroundResource(R.drawable.bg_box_outline);
+                box.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                box.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 12), 0);
+                final EditText e = new EditText(this);
+                e.setInputType(InputType.TYPE_CLASS_NUMBER);
+                e.setBackgroundColor(0x00000000);
+                e.setHint(it[2]);
+                box.addView(e, new LinearLayout.LayoutParams(0, -1, 1f));
+                box.addView(Ui.tv(this, it[1], 13.5f, 0xFF5A6472, false));
+                LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(-1, Ui.dp(this, 44));
+                bp.setMargins(0, Ui.dp(this, 6), 0, 0);
+                right.addView(box, bp);
+                right.addView(Ui.tv(this, "Range: " + it[2] + " - " + it[3], 12f, 0xFF5A6472, false));
+                e.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+                    public void onFocusChange(View v, boolean has) {
+                        if (!has) {
+                            Session.vhrData.put("phys|" + it[0], e.getText().toString());
+                            db.putInput(Session.sessionKey, "phys", it[0], e.getText().toString());
+                        }
+                    }
+                });
+            } else if ("QUAL".equals(it[4])) {
+                LinearLayout qual = new LinearLayout(this);
+                qual.setOrientation(LinearLayout.HORIZONTAL);
+                qual.setPadding(0, Ui.dp(this, 8), 0, 0);
+                final TextView ok = Ui.tv(this, "\uD83D\uDC4D  Ok     ", 14f, 0xFF14276F, true);
+                final TextView nok = Ui.tv(this, "\uD83D\uDC4E  Not Ok", 14f, 0xFF9AA3B4, false);
+                qual.addView(ok); qual.addView(nok);
+                right.addView(qual);
+                View.OnClickListener set = new View.OnClickListener() {
+                    public void onClick(View v) {
+                        boolean isOk = v == ok;
+                        ok.setTextColor(isOk ? 0xFF14276F : 0xFF9AA3B4);
+                        nok.setTextColor(!isOk ? 0xFF14276F : 0xFF9AA3B4);
+                        Session.vhrData.put("phys|" + it[0], isOk ? "Ok" : "Not Ok");
+                        db.putInput(Session.sessionKey, "phys", it[0], isOk ? "Ok" : "Not Ok");
+                    }
+                };
+                ok.setOnClickListener(set); nok.setOnClickListener(set);
+            } else {
+                right.addView(Ui.tv(this, "Tap the tile to attach a photo", 12f, 0xFF5A6472, false));
+            }
+            card.addView(right, new LinearLayout.LayoutParams(0, -2, 1f));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+            lp.setMargins(0, 0, 0, Ui.dp(this, 10));
+            host.addView(card, lp);
+        }
+        next("Next");
+    }
+
+    // ---------------------------------------------------------------- SUMMARY
+    private void tabSummary() {
+        boolean anyFail = false;
+        for (String[] r : liveRows) if ("FAIL".equals(r[4])) { anyFail = true; break; }
+        for (String v : Session.vhrData.values()) if ("Not Ok".equals(v)) { anyFail = true; break; }
+        final String verdict = anyFail ? "Attention Needed" : "Passed";
+
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackgroundResource(R.drawable.bg_card);
+        card.setPadding(Ui.dp(this, 16), Ui.dp(this, 20), Ui.dp(this, 16), Ui.dp(this, 20));
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        ImageView shield = new ImageView(this);
+        shield.setImageResource(R.drawable.ic_shield);
+        row.addView(shield, new LinearLayout.LayoutParams(Ui.dp(this, 46), Ui.dp(this, 46)));
+        TextView verdictTv = Ui.tv(this, "  " + verdict, 19f, anyFail ? 0xFFF9A825 : 0xFF2E9E43, true);
+        row.addView(verdictTv);
+        card.addView(row);
+        card.addView(Ui.tv(this, "Vehicle Health Condition", 13f, 0xFF5A6472, false));
+        card.addView(Ui.tv(this, "Date: " + new java.text.SimpleDateFormat("yyyy-MM-dd",
+                java.util.Locale.US).format(new java.util.Date()), 13f, 0xFF5A6472, false));
+        card.addView(Ui.tv(this, "Disclaimer: This is not a legal document. All parameters recorded "
+                + "are at the time of inspection.", 11.5f, 0xFF9AA3B4, false));
+        host.addView(card);
+
+        TextView gen = Ui.navyBtn(this, "GENERATE PDF REPORT");
+        LinearLayout.LayoutParams gp = new LinearLayout.LayoutParams(-1, -2);
+        gp.setMargins(0, Ui.dp(this, 12), 0, 0);
+        host.addView(gen, gp);
+        gen.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { generate(verdict); }
+        });
+    }
+
+    private void generate(final String verdict) {
+        final android.app.Dialog d = Ui.progressDialog(this, "Composing PDF…");
+        d.show();
+        h.postDelayed(new Runnable() {
+            public void run() {
+                d.dismiss();
+                pdfPath = PdfReport.generate(VhrActivity.this, verdict, liveRows);
+                if (pdfPath != null) {
+                    Session.reportGenerated = true;
+                    db.saveVhr(Session.sessionKey, Session.vehicleId, Session.selectedVin, pdfPath, verdict);
+                    Ui.resultDialog(VhrActivity.this, R.drawable.ic_flash_success,
+                            "Report Generated",
+                            Session.selectedVehicle.replace("TVS ", "") + "_" + Session.selectedVin + "_VHR.pdf"
+                                    + "\n\nSaved to app storage and listed under Reports.",
+                            "Open Reports", new Runnable() {
+                                public void run() { go(ReportsActivity.class); finish(); }
+                            }).show();
+                } else {
+                    toast("PDF generation failed");
+                }
+            }
+        }, 1400);
     }
 }

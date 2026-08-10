@@ -2,8 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="com.nirixx.app"
-    android:versionCode="8"
-    android:versionName="1.3.4">
+    android:versionCode="9"
+    android:versionName="1.4.0">
 
         <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
@@ -70,7 +70,7 @@
         <activity android:name=".SupplierFlashActivity" />
         <activity android:name=".ClusterFlashListActivity" />
         <activity android:name=".VciFirmwareListActivity" />
-        <activity android:name=".VciCatalogActivity" />
+        <activity android:name=".WriteDataActivity" />
         <activity android:name=".SystemCheckActivity" />
         <activity android:name=".ReportsActivity" />
         <activity android:name=".DiagnosticReportActivity" />

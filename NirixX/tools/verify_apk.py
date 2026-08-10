@@ -28,11 +28,13 @@ RES  = os.path.join(APP, 'res')
 APK  = os.path.join(ROOT, 'NirixX.apk')
 MANIFEST = os.path.join(ROOT, 'manifest', 'AndroidManifest.xml')
 REPORT_MD = os.path.join(ROOT, 'VERIFICATION.md')
-AAPT2 = '/home/user/tooling/bin/aapt2'
-APKSIGNER = '/home/user/tooling/lib/apksigner.jar'
-JAVA = '/home/user/venv/lib/python3.11/site-packages/jdk4py/java-runtime/bin/java'
+AAPT2 = os.environ.get('NIRIXX_AAPT2', '/home/user/tooling/bin/aapt2')
+APKSIGNER = os.environ.get('NIRIXX_APKSIGNER', '/home/user/tooling/lib/apksigner.jar')
+JAVA = os.environ.get('NIRIXX_JAVA', '/home/user/venv/lib/python3.11/site-packages/jdk4py/java-runtime/bin/java')
 
-ENV = dict(os.environ, HOME='/home/user', ANDROID_HOME='/home/user/android-sdk')
+ENV = dict(os.environ)
+ENV.setdefault('HOME', '/home/user')
+ENV.setdefault('ANDROID_HOME', '/home/user/android-sdk')
 ANDROID_NS = '{http://schemas.android.com/apk/res/android}'
 
 errors, warns, notes = [], [], []

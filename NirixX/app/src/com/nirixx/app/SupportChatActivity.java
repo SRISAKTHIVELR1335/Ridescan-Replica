@@ -1,26 +1,35 @@
 package com.nirixx.app;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.View;
-import android.widget.ScrollView;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import com.nirixx.app.db.Db;
 
-/** Support chatbot ("Welcome to NirixX Assistant!") with canned technician Q&A. */
+/** NirixX Assistant — in-app help chat plus the customer helpline
+ *  (number comes from the configs table, mirroring the reference flashing dialog). */
 public class SupportChatActivity extends BaseActivity {
+
     private LinearLayout chat;
-    private ScrollView scroll;
     private final Handler h = new Handler();
 
     private static final String[][] QNA = {
-        {"flash", "For ECU flashing: connect the VCI, pick ECU Flashing → your supplier module, confirm the IMAGE type, and keep the app in foreground until 'ECU Flashing completed'. Never abort mid-program — retry instead."},
-        {"dtc", "To read fault codes: VIN Based Diagnosis → Get Vehicle Details → Select ECU → Read DTCs. Use 'Clear DTCs' only after noting freeze-frame data."},
-        {"vci", "If the VCI won't pair: power-cycle the dongle, enable Location for BLE scanning, then Add Device → scan. Firmware is updated under VCI Firmware Update."},
-        {"firmware", "VCI firmware: Home → VCI Firmware Update → pick your dongle generation (TZ VCI / Mini / New / NRX Pro). Recovery uses the bundled Renesas image."},
-        {"report", "Reports: Health Reports tile → Diagnostic / VHR / Battery. Export as PDF, then Upload to DMS for sync."},
-        {"iupr", "IUPR runs from the ECU diagnosis screen (Primary/Secondary). Collect counters after a ride cycle for AIS-137 compliance."},
+        {"flash", "For ECU flashing: Diagnostics → pick vehicle → ECU Diagnosis → ECU Flashing. Watch the conditions video, keep the app in the foreground and wait for 'ECU Flashing completed'. If anything crashes, call the helpline shown above."},
+        {"dtc", "To read fault codes: VIN Based Diagnosis (or Diagnostics → vehicle) → Select ECU → Diagnostic Trouble Codes → Read DTCs. Note freeze-frame data before Clear."},
+        {"vci", "The VCI page offers three physical interfaces only — Bluetooth, Wi-Fi and USB. Pick your NirixiLINK on the login screen or Home → VCI Connect, enable Location for BT scanning, then connect."},
+        {"bluetooth", "Bluetooth pairing: Home → VCI Connect → Bluetooth tile → scan → tap your NirixiLINK_xxxxxx. Keep the dongle powered and within a metre of the phone."},
+        {"wifi", "Wi-Fi: connect the phone to the VCI's hotspot (NirixiLINK_xxxxxx), then Home → VCI Connect → Wi-Fi tile → Connect."},
+        {"usb", "USB: attach the VCI with an OTG cable — the app enumerates it under VCI Connect → USB."},
+        {"firmware", "VCI firmware: Home → VCI Firmware Update → pick the connected NirixiLINK. Recovery uses the bundled image."},
+        {"report", "Reports: Home → Health Report for a fresh VHR (Dealer / Diagnostic / IO Control / Physical Evaluation / Summary tabs), PDF saved under File Viewer → REPORTS and listed under Reports."},
+        {"iupr", "IUPR runs from ECU Diagnosis → IUPR Test (Primary / Secondary tabs). History is stored in the database."},
+        {"record", "Screen recording: Account → Start Session Recording. Stop it from the same button; the session marking is stored for support."},
+        {"vin", "Auto VIN: Home → VIN Based Diagnosis → READ VIN. When the VIN matches the database you get Diagnostic Section / VHR shortcuts; unknown VINs open the vehicle grid for manual selection."},
+        {"call", "Tap the green pill above — it dials NirixX support directly (+91 79694 78770)."},
     };
 
     @Override
@@ -28,39 +37,55 @@ public class SupportChatActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_screen);
         setTitle("NirixX Assistant");
-        wireBack();
-
         LinearLayout content = (LinearLayout) findViewById(R.id.content);
+
+        // ---- helpline (reference: flashing conditions dialog) --------------
+        final String number = Db.get(this).config("support_number", "+917969478770");
+        LinearLayout help = Ui.card(this);
+        help.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
+        help.addView(Ui.tv(this, "If any App Crashes Please Contact.", 13f, 0xFF5A6472, false));
+        LinearLayout pill = Ui.phonePill(this, pretty(number));
+        LinearLayout.LayoutParams pp = new LinearLayout.LayoutParams(-2, -2);
+        pp.setMargins(0, Ui.dp(this, 8), 0, 0);
+        help.addView(pill, pp);
+        pill.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                startActivity(new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + number)));
+            }
+        });
+        content.addView(help);
+
+        // ---- chat area ------------------------------------------------------
         chat = new LinearLayout(this);
         chat.setOrientation(LinearLayout.VERTICAL);
-        content.addView(chat, new LinearLayout.LayoutParams(-1, Ui.dp(this, 300)));
+        LinearLayout.LayoutParams chp = new LinearLayout.LayoutParams(-1, Ui.dp(this, 320));
+        chp.setMargins(0, Ui.dp(this, 8), 0, 0);
+        content.addView(chat, chp);
 
-        botSay("Welcome to NirixX Assistant!\nAsk me about flashing, DTCs, VCI pairing, firmware, reports or IUPR.");
+        botSay("Welcome to NirixX Assistant!\nAsk me about flashing, DTCs, VCI pairing (Bluetooth / Wi-Fi / USB), firmware, reports, IUPR, auto VIN or screen recording.");
         suggest("How do I flash an ECU?", "flash");
-        suggest("My VCI is not pairing", "vci");
-        suggest("Export health reports", "report");
+        suggest("Pair the VCI over Wi-Fi", "wifi");
+        suggest("Generate a health report", "report");
+        suggest("Call customer care", "call");
 
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        LinearLayout rowIn = new LinearLayout(this);
+        rowIn.setOrientation(LinearLayout.HORIZONTAL);
+        rowIn.setGravity(android.view.Gravity.CENTER_VERTICAL);
         final EditText in = new EditText(this);
         in.setHint("Type a question…");
         in.setTextSize(13.5f);
         in.setSingleLine(true);
-        in.setBackgroundResource(R.drawable.bg_edittext);
+        in.setBackgroundResource(R.drawable.bg_box_outline);
         in.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 12), 0);
-        row.addView(in, new LinearLayout.LayoutParams(0, Ui.dp(this, 46), 1f));
-        android.widget.Button send = new android.widget.Button(this);
-        send.setText("Send");
-        send.setTextColor(0xFFFFFFFF);
-        send.setAllCaps(false);
-        send.setBackgroundResource(R.drawable.bg_button_blue);
-        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(Ui.dp(this, 84), Ui.dp(this, 46));
+        rowIn.addView(in, new LinearLayout.LayoutParams(0, Ui.dp(this, 46), 1f));
+        TextView send = Ui.navyBtn(this, "Send");
+        send.setPadding(Ui.dp(this, 18), 0, Ui.dp(this, 18), 0);
+        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(-2, Ui.dp(this, 46));
         sp.setMargins(Ui.dp(this, 8), 0, 0, 0);
-        row.addView(send, sp);
+        rowIn.addView(send, sp);
         LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-1, -2);
         rp.setMargins(0, Ui.dp(this, 8), 0, Ui.dp(this, 8));
-        content.addView(row, rp);
+        content.addView(rowIn, rp);
 
         send.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -73,8 +98,15 @@ public class SupportChatActivity extends BaseActivity {
         });
     }
 
+    private static String pretty(String n) {
+        if (n != null && n.startsWith("+91") && n.length() == 13)
+            return "+91 " + n.substring(3, 8) + " " + n.substring(8);
+        return n == null ? "" : n;
+    }
+
     private void suggest(final String label, final String key) {
-        TextView chip = Ui.chip(this, label, R.drawable.bg_chip, 0xFF0B8376);
+        TextView chip = Ui.chip(this, label, R.drawable.bg_chip_grey, 0xFF3A4663);
+        chip.setPadding(Ui.dp(this, 12), Ui.dp(this, 6), Ui.dp(this, 12), Ui.dp(this, 6));
         LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(-2, -2);
         cp.setMargins(Ui.dp(this, 4), Ui.dp(this, 6), 0, 0);
         chat.addView(chip, cp);
@@ -90,11 +122,11 @@ public class SupportChatActivity extends BaseActivity {
     private void userSay(String text) { bubble(text, false); }
 
     private void bubble(String text, boolean bot) {
-        TextView t = Ui.tv(this, text, 13f, bot ? 0xFF141B2E : 0xFFFFFFFF, false);
-        t.setBackground(Ui.roundRect(bot ? 0xFFE4F5FB : 0xFF0B8376, 12, this));
+        TextView t = Ui.tv(this, text, 13f, bot ? 0xFF1A2138 : 0xFFFFFFFF, false);
+        t.setBackground(Ui.roundRect(bot ? 0xFFE9EDF5 : 0xFF14276F, 12, this));
         int hp = Ui.dp(this, 12), vp = Ui.dp(this, 8);
         t.setPadding(hp, vp, hp, vp);
-        t.setLineSpacing(1.25f, 1f);
+        t.setLineSpacing(3f, 1f);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
         lp.setMargins(bot ? 0 : Ui.dp(this, 48), Ui.dp(this, 6), bot ? Ui.dp(this, 48) : 0, 0);
         lp.gravity = bot ? android.view.Gravity.LEFT : android.view.Gravity.RIGHT;
@@ -107,8 +139,8 @@ public class SupportChatActivity extends BaseActivity {
                 for (int i = 0; i < QNA.length; i++) {
                     if (q.contains(QNA[i][0])) { botSay(QNA[i][1]); return; }
                 }
-                botSay("I'm the in-app helper — try keywords like: flash, dtc, vci, firmware, report, iupr. For anything else, raise a ticket on the DMS portal.");
+                botSay("I'm the in-app helper — try keywords like: flash, dtc, vci, bluetooth, wifi, usb, firmware, report, iupr, vin, record, call.");
             }
-        }, 700);
+        }, 650);
     }
 }
