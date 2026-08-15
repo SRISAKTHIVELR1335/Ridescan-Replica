@@ -94,7 +94,8 @@ public final class Roles {
                 || "GearLearningActivity".equals(simpleName)) return M_BATTERY;
         if ("LiveDataRecordingActivity".equals(simpleName)) return M_RECORDING;
         if ("AddDeviceActivity".equals(simpleName)) return M_VCI;
-        if ("VciFirmwareListActivity".equals(simpleName)) return M_VCI_FW;
+        if ("VciFirmwareListActivity".equals(simpleName)
+                || "FirmwareUpdateActivity".equals(simpleName)) return M_VCI_FW;
         if ("ServiceManualActivity".equals(simpleName)) return M_MANUAL;
         if ("LogViewerActivity".equals(simpleName)
                 || "FileViewerActivity".equals(simpleName)) return M_LOGS;

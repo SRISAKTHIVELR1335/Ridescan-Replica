@@ -2,8 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="com.nirixx.app"
-    android:versionCode="11"
-    android:versionName="1.6.0">
+    android:versionCode="12"
+    android:versionName="1.6.1">
 
         <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
@@ -94,7 +94,6 @@
         <activity android:name=".DataWatcherActivity" />
 
         <service android:name=".ClientService" android:foregroundServiceType="dataSync" android:exported="false" />
-        <service android:name=".OverlayService" android:exported="false" />
         <service android:name=".ScreenRecordOverlayService" android:exported="false" />
         <service android:name=".AppCloseService" android:exported="false" android:stopWithTask="false" />
         <provider android:name=".DocsProvider" android:authorities="com.nirixx.app.docs"

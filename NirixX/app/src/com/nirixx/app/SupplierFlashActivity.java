@@ -45,6 +45,12 @@ public class SupplierFlashActivity extends BaseActivity {
         family = getIntent().getStringExtra("family");
         if (module == null) module = "ECU Flashing";
         setContentView(R.layout.activity_screen);
+        if (!com.nirixx.app.core.role.Roles.can(Session.userType, "flash")) {
+            Ui.dialog(this, "Not permitted",
+                    "This is an engineering operation restricted to the Dealer Engineer role.",
+                    "OK", new Runnable() { public void run() { finish(); } }, null, null).show();
+            return;
+        }
         setTitle(module);
         wireBack();
         db = Db.get(this);

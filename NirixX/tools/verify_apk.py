@@ -225,8 +225,10 @@ for f in sorted(os.listdir(SRC)):
     if is_act and cls not in act_names: err('%s.java exists but is NOT declared in manifest' % cls)
 
     # nav targets (activities OR services): go(X.class), new Intent(.., X.class)
+    # — the intent form tolerates FQCN construction and ternary targets.
     explicit = set(re.findall(r'\bgo\s*\(\s*([\w$]+)\.class', src))
-    explicit |= set(re.findall(r'new\s+Intent\s*\([^;]*?,\s*([\w$]+)\.class', src))
+    for call in re.findall(r'new\s+(?:[\w.]*\.)?Intent\s*\((.*?)\)\s*[;,.)]', src, re.S):
+        explicit |= set(re.findall(r'\b([\w$]+)\.class\b', call))
     for t in explicit:
         if t not in act_names and t not in svc_names:
             err('%s navigates to undeclared component %s' % (cls, t))

@@ -13,6 +13,8 @@ public class NirixXApp extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        // keep-alive hook that releases the VCI link when the task is removed
+        startService(new android.content.Intent(this, AppCloseService.class));
         final Thread.UncaughtExceptionHandler upstream = Thread.getDefaultUncaughtExceptionHandler();
         Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
             public void uncaughtException(Thread thread, Throwable error) {

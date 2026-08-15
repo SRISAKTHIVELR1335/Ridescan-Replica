@@ -30,7 +30,7 @@ public class UpdateActivity extends BaseActivity {
         content.addView(art, ap);
 
         LinearLayout card = Ui.card(this);
-        card.addView(Ui.kvRow(this, "Installed", db.config("app_version", "V 1.6.0"), false));
+        card.addView(Ui.kvRow(this, "Installed", db.config("app_version", "V 1.6.1"), false));
         card.addView(Ui.kvRow(this, "Update channel", "not configured", false));
         card.addView(Ui.kvRow(this, "Delivery", "Signed APK from your distributor / Arena build", true));
         content.addView(card);
@@ -43,7 +43,7 @@ public class UpdateActivity extends BaseActivity {
                 12.5f, 0xFF5A6472, false));
         content.addView(note);
 
-        TextView notes = Ui.navyBtn(this, "RELEASE NOTES (1.6.0)");
+        TextView notes = Ui.navyBtn(this, "RELEASE NOTES (1.6.1)");
         LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(-1, Ui.dp(this, 46));
         np.setMargins(0, Ui.dp(this, 8), 0, 0);
         content.addView(notes, np);

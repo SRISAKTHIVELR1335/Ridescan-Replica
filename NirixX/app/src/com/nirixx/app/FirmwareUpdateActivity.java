@@ -24,6 +24,12 @@ public class FirmwareUpdateActivity extends BaseActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_screen);
+        if (!com.nirixx.app.core.role.Roles.can(Session.userType, "vci_fw")) {
+            Ui.dialog(this, "Not permitted",
+                    "VCI firmware functions require the Dealer Engineer role.",
+                    "OK", new Runnable() { public void run() { finish(); } }, null, null).show();
+            return;
+        }
         String dev = getIntent().getStringExtra("device");
         setTitle((dev == null || dev.length() == 0 ? "VCI" : dev) + " Firmware");
         wireBack();
