@@ -43,6 +43,12 @@ public class FlashActivity extends BaseActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_screen);
+        if (!com.nirixx.app.core.role.Roles.can(Session.userType, "flash")) {
+            Ui.dialog(this, "Not permitted",
+                    "This is an engineering operation restricted to the Dealer Engineer role.",
+                    "OK", new Runnable() { public void run() { finish(); } }, null, null).show();
+            return;
+        }
         setTitle("ECU Flashing");
         showEcuChip(Session.selectedEcuCode, true);
         db = Db.get(this);

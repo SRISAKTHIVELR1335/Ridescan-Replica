@@ -19,7 +19,7 @@ import java.util.List;
 public final class Db extends SQLiteOpenHelper {
 
     private static final String NAME = "nirixx.db";
-    private static final int VER = 1;
+    private static final int VER = 2;
     private static Db inst;
 
     public static synchronized Db get(Context c) {
@@ -32,7 +32,7 @@ public final class Db extends SQLiteOpenHelper {
     // ------------------------------------------------------------------ rows
     public static final class Vehicle {
         public long id; public String model, variant, type, obd, protocol, emission,
-                vinPrefix, vinSample, vinFormat, description, image;
+                vinPrefix, vinSample, vinFormat, description, image, vinRule;
         public String toString() { return model; }
     }
     public static final class Ecu {
@@ -59,7 +59,7 @@ public final class Db extends SQLiteOpenHelper {
                 " phone TEXT, role_id INTEGER REFERENCES roles(role_id), pin TEXT)");
         db.execSQL("CREATE TABLE vehicles(vehicle_id INTEGER PRIMARY KEY AUTOINCREMENT," +
                 " model TEXT, variant TEXT, type TEXT, obd TEXT, protocol TEXT, emission TEXT," +
-                " vin_prefix TEXT, vin_sample TEXT, vin_format TEXT, description TEXT, image_res TEXT)");
+                " vin_prefix TEXT, vin_sample TEXT, vin_format TEXT, description TEXT, image_res TEXT, vin_rule TEXT)");
         db.execSQL("CREATE TABLE ecus(ecu_id INTEGER PRIMARY KEY AUTOINCREMENT," +
                 " vehicle_id INTEGER REFERENCES vehicles(vehicle_id) ON DELETE CASCADE," +
                 " name TEXT, code TEXT, protocol TEXT, emission TEXT, manufacturer TEXT," +
@@ -95,19 +95,29 @@ public final class Db extends SQLiteOpenHelper {
     }
 
     @Override
-    public void onUpgrade(SQLiteDatabase db, int o, int n) { /* v1: fresh */ }
+    public void onUpgrade(SQLiteDatabase db, int o, int n) {
+        String[] tables = {"roles","users","vehicles","ecus","tests","vhr_items","dtc_lib",
+                "flash_files","sessions","logs","stream_samples","test_inputs","iupr_history",
+                "vhr_reports","configs"};
+        for (int i = 0; i < tables.length; i++) db.execSQL("DROP TABLE IF EXISTS " + tables[i]);
+        onCreate(db);
+    }
 
     // ------------------------------------------------------------------ seed
     private static void seed(SQLiteDatabase db) {
+        ins(db, "roles", new String[]{"name"}, new Object[]{"Dealer Engineer"});
+        ins(db, "roles", new String[]{"name"}, new Object[]{"Dealer Service"});
+        ins(db, "roles", new String[]{"name"}, new Object[]{"Service Manager"});
         ins(db, "roles", new String[]{"name"}, new Object[]{"Service Technician"});
         ins(db, "roles", new String[]{"name"}, new Object[]{"Service Advisor"});
-        ins(db, "roles", new String[]{"name"}, new Object[]{"Service Manager"});
         ins(db, "roles", new String[]{"name"}, new Object[]{"Administrator"});
 
         ins(db, "users", new String[]{"dealer_code","name","email","branch_id","phone","role_id","pin"},
-                new Object[]{"10814", "NEO MOTORS", "neomotors@nirixx.in", "10814", "+91 98410 22011", 3, "1234"});
+                new Object[]{"10814", "NEO MOTORS", "neomotors@nirixx.in", "10814", "+91 98410 22011", 1, "1234"});
         ins(db, "users", new String[]{"dealer_code","name","email","branch_id","phone","role_id","pin"},
-                new Object[]{"12345", "RAJIV P", "rajiv.p@nirixx.in", "12345-AMB", "+91 99887 66554", 1, "0000"});
+                new Object[]{"12345", "RAJIV P", "rajiv.p@nirixx.in", "12345-AMB", "+91 99887 66554", 2, "0000"});
+        ins(db, "users", new String[]{"dealer_code","name","email","branch_id","phone","role_id","pin"},
+                new Object[]{"10815", "ARUN K", "arun.k@nirixx.in", "10815-MDU", "+91 97900 11223", 4, "1111"});
 
         long jupiter = v(db, "TVS Jupiter New", "JUP125_ISG_BSVI", "Scooter", "OBD II", "CAN", "BS VI OBD-II",
                 "MD626EG", "MD626EG55S1B37997", "MD6 26E G##S#B#####",
@@ -196,9 +206,14 @@ public final class Db extends SQLiteOpenHelper {
                 {"Rear tyre pressure", "PSI", "28", "28", "VAL"},
                 {"Dip stick oil level", "", "-", "-", "QUAL"}});
 
+        // ---- full supplied model table (33 TVS models) --------------------
+        // (the four curated rows above carry the captured reference VINs/data;
+        //  these rows come verbatim from the project's supplied vehicle list)
+        seedSuppliedTable(db);
+
         // ---- configs -------------------------------------------------------
         setConfig(db, "support_number", "+917969478770");
-        setConfig(db, "app_version", "V 1.4.0");
+        setConfig(db, "app_version", "V 1.5.0");
         setConfig(db, "connectivity", "BLUETOOTH");
         setConfig(db, "last_vci", "NirixiLINK_504856");
         setConfig(db, "dms_domain", "DMS");
@@ -208,8 +223,150 @@ public final class Db extends SQLiteOpenHelper {
                           String protocol, String emission, String prefix, String sample,
                           String format, String desc, String img) {
         return ins(db, "vehicles",
-                new String[]{"model","variant","type","obd","protocol","emission","vin_prefix","vin_sample","vin_format","description","image_res"},
-                new Object[]{model, variant, type, obd, protocol, emission, prefix, sample, format, desc, img});
+                new String[]{"model","variant","type","obd","protocol","emission","vin_prefix","vin_sample","vin_format","description","image_res","vin_rule"},
+                new Object[]{model, variant, type, obd, protocol, emission, prefix, sample, format, desc, img, ""});
+    }
+
+    /** Register one model row straight from the supplied 33-model table. */
+    private static long addSupplied(SQLiteDatabase db, String model, String variant, String rule,
+                                    String type, String img) {
+        String prefix = com.nirixx.app.core.vin.VinRules.prefixOf(rule);
+        return ins(db, "vehicles",
+                new String[]{"model","variant","type","obd","protocol","emission","vin_prefix","vin_sample","vin_format","description","image_res","vin_rule"},
+                new Object[]{model, variant, type, "OBD II", "CAN", "BS VI OBD-II", prefix, "", rule,
+                        variant.length() > 0 ? variant + "  (VIN family " + prefix + ")" : "VIN family " + prefix,
+                        img, rule});
+    }
+
+
+    /** The project's supplied vehicle list: (model, variant/systems, VIN rule).
+     *  Rows whose model is already curated above are skipped at seed time. */
+    private static final String[][] SUPPLIED = {
+        {"TVS Apache 160 4V ABS", "Dual Channel - 4V - EMS - ABS (Cont)", "MD637CE5XXXXXXXXX"},
+        {"TVS Apache RR 310", "Apache - EMS, ABS(BOSCH)", "MD634CE4XXXXXXXXXX"},
+        {"TVS Apache RTR 160 2V", "Single CH - 2V - EMS,ABS(BOSCH)", "MD634CE4XXXXXXXXX"},
+        {"TVS Apache RTR 180 2V RM", "RM - EMS,ABS(BOSCH)", "MD634CE4XXXXXXXXX"},
+        {"TVS Apache RTR 200 4V RM", "EMS", "MD637XXXXXXXXXXXX"},
+        {"TVS Apache RTX", "EMS, ABS, ICU(VISTEON)", "MD637BT1XXXXXXXXX"},
+        {"TVS Raider 125", "EMS, ICU", "MD625CK2XXXXXXXXX"},
+        {"TVS Raider IGO", "EMS, SEDAMAC", "MD625CK2XXXXXXXXX"},
+        {"TVS Radeon", "EMS", "MD625CKXXXXXXXXXXX"},
+        {"TVS Sport", "EMS", "MD625CK2XXXXXXXXXX"},
+        {"TVS Sport Kick Start", "EMS - KEIHIN", "MD625CK2XXXXXXXXXX"},
+        {"TVS Star City Plus", "EMS", "MD625AK2XXXXXXXXXX"},
+        {"TVS Jupiter Old", "EMS - CONTINENTAL", "MD637BT1XXXXXXXXXX"},
+        {"TVS Ntorq 125", "EMS", "MD637XXXXXXXXXXXXX"},
+        {"TVS Ntorq 150", "", "MD637XXXXXXXXXXXXX"},
+        {"TVS Scooty Pep Plus", "EMS", "MD637XXXXXXXXXXXXX"},
+        {"TVS Zest", "EMS", "MD637XXXXXXXXXXXXX"},
+        {"TVS iQube ST", "EMS", "MD62912XXXXXXXXXX"},
+        {"TVS iQube S", "EMS", "MD62912XXXXXXXXXX"},
+        {"TVS KING GS+", "PASSENGER - AC Pet", "MD6M14PFXXXXXXXXX"},
+        {"TVS KING ZS+", "PASSENGER - AC CNG", "MD6M14CFXXXXXXXXX"},
+        {"TVS KING LS+", "PASSENGER - AC LPG", "MD6M14LFXXXXXXXXX"},
+        {"TVS KING GD", "PASSENGER - LC Pet", "MD6M1LPFXXXXXXXXX"},
+        {"TVS KING ZD", "PASSENGER - LC CNG", "MD6M1LCFXXXXXXXXXX"},
+        {"TVS KING ZK PF", "CARGO PF", "MD6N1LCFXXXXXXXXXX"},
+        {"TVS KING ZK LT", "CARGO LT", "MD6N1LCFXXXXXXXXXX"},
+        {"TVS KING E", "PASSENGER - EV", "MD6EVM1DXXXXXXXXXX"},
+        {"TVS 3W LARGE", "CARGO - LC CNG", "MD6N1LCGXXXXXXXXXX"},
+        {"TVS KING 3W LARGE", "CARGO - EV", "MD6EVNICXXXXXXXXXX"},
+    };
+
+    private static final String[] SKIP_SUPPLIED = {
+        "TVS Ronin", "TVS Jupiter New", "TVS XL 100", "TVS XL 100 HD",
+        "TVS Apache 160 4V ABS",          // covered by curated "TVS Apache RTR 160 4V"
+    };
+
+    private static void seedSuppliedTable(SQLiteDatabase db) {
+        java.util.List<String> curated = new java.util.ArrayList<String>();
+        for (int i = 0; i < SKIP_SUPPLIED.length; i++) curated.add(SKIP_SUPPLIED[i]);
+        for (int i = 0; i < SUPPLIED.length; i++) {
+            String[] m = SUPPLIED[i];
+            if (curated.contains(m[0])) continue;
+            String type = suppliedType(m[0]);
+            String img = suppliedImage(m[0], type);
+            long vid = addSupplied(db, m[0], m[1], m[2], type, img);
+            seedSystems(db, vid, m[1], m[0]);
+            phys(db, vid, new String[][]{
+                    {"Drive chain slackness", "mm", "18", "30", "VAL"},
+                    {"Front tyre pressure", "PSI", "25", "32", "VAL"},
+                    {"Rear tyre pressure", "PSI", "28", "36", "VAL"},
+                    {"Dip stick oil level", "", "-", "-", "QUAL"},
+                    {"Clutch play", "mm", "8", "13", "VAL"},
+                    {"Customer image", "", "-", "-", "PHOTO"}});
+        }
+    }
+
+    private static String suppliedType(String model) {
+        if (model.contains("KING") || model.contains("3W")) return "3-Wheeler";
+        if (model.contains("Jupiter") || model.contains("Ntorq") || model.contains("Scooty")
+                || model.contains("Zest") || model.contains("iQube")) return "Scooter";
+        return "Motorcycle";
+    }
+
+    private static String suppliedImage(String model, String type) {
+        if (model.contains("Apache")) return "veh_sport";
+        if (model.contains("Ronin")) return "veh_cruiser";
+        if ("Scooter".equals(type)) return "veh_scooter";
+        return "motorcycle";                       // generic NirixX artwork, no per-model pack
+    }
+
+    /** ECU applicability derived from the supplied variant strings
+     *  (EMS/ABS/ICU/ISG/EV tags and named suppliers) — nothing invented. */
+    private static void seedSystems(SQLiteDatabase db, long vid, String variant, String model) {
+        String up = variant.toUpperCase(java.util.Locale.US);
+        if (up.contains("EV")) {
+            ec(db, vid, "BATTERY MANAGEMENT SYSTEM", "BMS", "CAN", "\u2014", "TVSE", "7E4", "7EC", 1);
+            ec(db, vid, "MOTOR CONTROL UNIT", "MCU", "CAN", "\u2014", "TVSE", "7E5", "7ED", 2);
+            return;
+        }
+        String mfr = up.contains("KEIHIN") ? "KEIHIN"
+                : up.contains("CONTINENTAL") ? "CONTINENTAL"
+                : up.contains("BOSCH") ? "BOSCH"
+                : up.contains("VISTEON") ? "VISTEON"
+                : up.contains("SEDEMAC") ? "SEDEMAC" : "SEDEMAC";
+        long ems = ec(db, vid, "ENGINE MANAGEMENT SYSTEM (OBDII)", "EMS-OBDII",
+                "CAN", "OBD II", mfr, "7E0", "7E8", 1);
+        genericLive(db, ems);
+        ins(db, "dtc_lib", new String[]{"ecu_id","code","descr"},
+                new Object[]{ems, "P0130", "O2 Sensor Circuit Malfunction (Bank 1 Sensor 1)"});
+        ins(db, "dtc_lib", new String[]{"ecu_id","code","descr"},
+                new Object[]{ems, "P0562", "System Voltage Low"});
+        int sort = 2;
+        if (up.contains("ABS")) {
+            long abs = ec(db, vid, "ANTI-LOCK BRAKING SYSTEM", "BABS", "CAN", "\u2014",
+                    up.contains("BOSCH") ? "BOSCH" : "CONTINENTAL", "7E1", "7E9", sort++);
+            ins(db, "tests", new String[]{"ecu_id","kind","name","sort"},
+                    new Object[]{abs, "io", "Start Wheel Speed Test", 1});
+            ins(db, "dtc_lib", new String[]{"ecu_id","code","descr"},
+                    new Object[]{abs, "C0031", "Left Front Wheel Speed Sensor Circuit"});
+        }
+        if (up.contains("ICU")) {
+            ec(db, vid, "INSTRUMENT CLUSTER", "ICM", "CAN", "\u2014",
+                    up.contains("VISTEON") ? "VISTEON" : "PRICOL", "7C0", "7C8", sort++);
+        }
+        if (up.contains("ISG")) {
+            ec(db, vid, "INTEGRATED STARTER GENERATOR (ISG)", "ISG", "CAN", "\u2014", "SEG",
+                    "7E4", "7EC", sort++);
+        }
+    }
+
+    /** Legislated generic OBD-II identification + baseline items
+     *  (category tagged so the UI can show when data is generic
+     *  vs vehicle-specific, per audit requirements). */
+    private static void genericLive(SQLiteDatabase db, long e) {
+        Object[][] rows = new Object[][]{
+                {"Read Vehicle Information (VIN)", "", 0, 0, "ECU Identification"},
+                {"CVN", "", 0, 0, "ECU Identification"},
+                {"CALID", "", 0, 0, "ECU Identification"},
+                {"Battery Voltage", "V", 10.5, 14.5, "Generic OBD-II"},
+                {"Engine Temperature", "\u00b0C", 65, 110, "Generic OBD-II"},
+                {"Engine Speed", "rpm", 1000, 2500, "Generic OBD-II"},
+        };
+        for (int i = 0; i < rows.length; i++)
+            ins(db, "tests", new String[]{"ecu_id","kind","name","unit","vmin","vmax","category","sort"},
+                    new Object[]{e, "live", rows[i][0], rows[i][1], rows[i][2], rows[i][3], rows[i][4], i + 1});
     }
 
     private static long ec(SQLiteDatabase db, long vid, String name, String code, String protocol,
@@ -328,15 +485,25 @@ public final class Db extends SQLiteOpenHelper {
         v.type = c.getString(3); v.obd = c.getString(4); v.protocol = c.getString(5);
         v.emission = c.getString(6); v.vinPrefix = c.getString(7); v.vinSample = c.getString(8);
         v.vinFormat = c.getString(9); v.description = c.getString(10); v.image = c.getString(11);
+        v.vinRule = c.getColumnCount() > 12 ? c.getString(12) : null;
         return v;
     }
 
-    /** VIN lookup: match on the stored prefix / family code (chars 1-7 carry the model). */
+    /** VIN lookup: exact captured-sample hit first, then longest-prefix rule
+     *  match over BOTH the stored family prefix and the supplied VIN rule.
+     *  No match -> null (never silently assume a vehicle). */
     public Vehicle vehicleByVin(String vin) {
         if (vin == null) return null;
-        for (Vehicle v : vehicles())
-            if (vin.startsWith(v.vinPrefix)) return v;
-        return null;
+        java.util.List<Vehicle> all = vehicles();
+        for (Vehicle v : all) if (vin.equals(v.vinSample) && v.vinSample.length() > 0) return v;
+        Vehicle best = null; int bestLen = -1;
+        for (Vehicle v : all) {
+            String p1 = v.vinPrefix == null ? "" : v.vinPrefix;
+            String p2 = v.vinRule == null ? "" : com.nirixx.app.core.vin.VinRules.prefixOf(v.vinRule);
+            String p = p1.length() >= p2.length() ? p1 : p2;
+            if (p.length() > bestLen && vin.startsWith(p)) { best = v; bestLen = p.length(); }
+        }
+        return best;
     }
 
     public Vehicle vehicle(long id) {

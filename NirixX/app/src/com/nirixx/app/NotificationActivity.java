@@ -8,7 +8,7 @@ import android.widget.TextView;
 public class NotificationActivity extends BaseActivity {
     private static final String[][] NOTIFS = {
         {"VCI Firmware Updates Available!", "Firmware 1.09 is available for your NirixiLINK VCI (Bluetooth / Wi-Fi / USB).", "2h ago", "true"},
-        {"App Update — NirixX 1.4.0", "Reference-UI parity build: real vehicle database, rebuilt VHR PDF and BT/Wi-Fi/USB VCI pages.", "Yesterday", "true"},
+        {"App Update — NirixX 1.5.0", "Reference-UI parity build: real vehicle database, rebuilt VHR PDF and BT/Wi-Fi/USB VCI pages.", "Yesterday", "true"},
         {"New flash files released", "U732 TFT cluster images (RLCD & TFT) pushed to flash_variant config.", "Mon", "false"},
         {"Scheduled DMS maintenance", "DMS sync will be unavailable Sun 01:00–03:00 IST.", "Sun", "false"},
     };

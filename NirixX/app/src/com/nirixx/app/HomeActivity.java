@@ -15,25 +15,26 @@ public class HomeActivity extends BaseActivity {
     private static final int NAVY = 0xFF3A4663;
     private static final int GREY = 0xFF5A6472;
 
+    /** label, icon, target, RBAC module (filtered by the signed-in role). */
     private static final Object[][] TILES = new Object[][]{
-        {"VIN Based\nDiagnosis", Integer.valueOf(R.drawable.vindiagnostic), VinDiagnosisActivity.class},
-        {"Diagnostics", Integer.valueOf(R.drawable.manualdiagnostic), VehicleListActivity.class},
-        {"ECU\nFlashing", Integer.valueOf(R.drawable.flash_blue), SupplierFlashListActivity.class},
-        {"VIN Based\nFlashing", Integer.valueOf(R.drawable.vinflashing), VinFlashingActivity.class},
-        {"Cluster\nFlashing", Integer.valueOf(R.drawable.racing_bike1), ClusterFlashListActivity.class},
-        {"Manual\nDiagnostic", Integer.valueOf(R.drawable.vintroubleshooting), ManualDiagnosticActivity.class},
-        {"Health\nReport", Integer.valueOf(R.drawable.vehicle_health_report), VhrActivity.class},
-        {"Reports", Integer.valueOf(R.drawable.ic_doc), ReportsActivity.class},
-        {"Battery\nHealth", Integer.valueOf(R.drawable.battery_health_report), BatteryHealthActivity.class},
-        {"Data\nRecording", Integer.valueOf(R.drawable.vci), LiveDataRecordingActivity.class},
-        {"VCI\nConnect", Integer.valueOf(R.drawable.bluetooth), AddDeviceActivity.class},
-        {"VCI\nFirmware", Integer.valueOf(R.drawable.firmwarecloud), VciFirmwareListActivity.class},
-        {"Vehicle\nList", Integer.valueOf(R.drawable.motorcycle), VehicleListActivity.class},
-        {"Service\nManual", Integer.valueOf(R.drawable.dtclibrary), ServiceManualActivity.class},
-        {"Log\nViewer", Integer.valueOf(R.drawable.dtc_blue), LogViewerActivity.class},
-        {"AI\nAssistant", Integer.valueOf(R.drawable.ic_chat), SupportChatActivity.class},
-        {"System\nCheck", Integer.valueOf(R.drawable.setting_1), SystemCheckActivity.class},
-        {"App\nUpdate", Integer.valueOf(R.drawable.flash), UpdateDescriptionActivity.class},
+        {"VIN Based\nDiagnosis", Integer.valueOf(R.drawable.vindiagnostic), VinDiagnosisActivity.class, "vin_diag"},
+        {"Diagnostics", Integer.valueOf(R.drawable.manualdiagnostic), VehicleListActivity.class, "vehicles"},
+        {"ECU\nFlashing", Integer.valueOf(R.drawable.flash_blue), SupplierFlashListActivity.class, "flash"},
+        {"VIN Based\nFlashing", Integer.valueOf(R.drawable.vinflashing), VinFlashingActivity.class, "vin_flash"},
+        {"Cluster\nFlashing", Integer.valueOf(R.drawable.racing_bike1), ClusterFlashListActivity.class, "flash"},
+        {"Manual\nDiagnostic", Integer.valueOf(R.drawable.vintroubleshooting), ManualDiagnosticActivity.class, "vin_flash"},
+        {"Health\nReport", Integer.valueOf(R.drawable.vehicle_health_report), VhrActivity.class, "vhr"},
+        {"Reports", Integer.valueOf(R.drawable.ic_doc), ReportsActivity.class, "reports"},
+        {"Battery\nHealth", Integer.valueOf(R.drawable.battery_health_report), BatteryHealthActivity.class, "battery"},
+        {"Data\nRecording", Integer.valueOf(R.drawable.vci), LiveDataRecordingActivity.class, "recording"},
+        {"VCI\nConnect", Integer.valueOf(R.drawable.bluetooth), AddDeviceActivity.class, "vci"},
+        {"VCI\nFirmware", Integer.valueOf(R.drawable.firmwarecloud), VciFirmwareListActivity.class, "vci_fw"},
+        {"Vehicle\nList", Integer.valueOf(R.drawable.motorcycle), VehicleListActivity.class, "vehicles"},
+        {"Service\nManual", Integer.valueOf(R.drawable.dtclibrary), ServiceManualActivity.class, "service_manual"},
+        {"Log\nViewer", Integer.valueOf(R.drawable.dtc_blue), LogViewerActivity.class, "logs"},
+        {"AI\nAssistant", Integer.valueOf(R.drawable.ic_chat), SupportChatActivity.class, "ai_assistant"},
+        {"System\nCheck", Integer.valueOf(R.drawable.setting_1), SystemCheckActivity.class, "system_check"},
+        {"App\nUpdate", Integer.valueOf(R.drawable.flash), UpdateDescriptionActivity.class, "app_update"},
     };
 
     @Override
@@ -119,11 +120,24 @@ public class HomeActivity extends BaseActivity {
         });
 
         // ---- feature grid ---------------------------------------------------
+        boolean service = !com.nirixx.app.core.role.Roles.isEngineer(Session.userType);
+        TextView role = Ui.chip(this, Session.userType, service
+                        ? R.drawable.bg_chip_grey : R.drawable.bg_chip_grey, NAVY);
+        LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(-2, -2);
+        rlp.setMargins(0, Ui.dp(this, 2), 0, Ui.dp(this, 4));
+        content.addView(role, rlp);
+        if (service) {
+            content.addView(Ui.tv(this,
+                    "Dealer Service flow: connect VCI → auto VIN → Diagnostic Section. "
+                            + "Engineering modules require the Dealer Engineer role.",
+                    12f, GREY, false));
+        }
         content.addView(Ui.section(this, "SERVICES"));
         GridLayout grid = new GridLayout(this);
         grid.setColumnCount(4);
         for (int i = 0; i < TILES.length; i++) {
             final Object[] tile = TILES[i];
+            if (!com.nirixx.app.core.role.Roles.can(Session.userType, (String) tile[3])) continue;
             LinearLayout cell = new LinearLayout(this);
             cell.setOrientation(LinearLayout.VERTICAL);
             cell.setGravity(android.view.Gravity.CENTER_HORIZONTAL);

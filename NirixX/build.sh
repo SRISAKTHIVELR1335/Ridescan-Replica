@@ -8,8 +8,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-VCODE=9
-VNAME="1.4.0"
+VCODE=10
+VNAME="1.5.0"
 
 # ---------------------------------------------------------------- toolchain
 detect() {

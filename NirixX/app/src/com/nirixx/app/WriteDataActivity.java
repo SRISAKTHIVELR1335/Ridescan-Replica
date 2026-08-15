@@ -26,6 +26,12 @@ public class WriteDataActivity extends BaseActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_screen);
+        if (!com.nirixx.app.core.role.Roles.can(Session.userType, "write_did")) {
+            Ui.dialog(this, "Not permitted",
+                    "This is an engineering operation restricted to the Dealer Engineer role.",
+                    "OK", new Runnable() { public void run() { finish(); } }, null, null).show();
+            return;
+        }
         setTitle("Write Data Identifier");
         showEcuChip(Session.selectedEcuCode, true);
         db = Db.get(this);

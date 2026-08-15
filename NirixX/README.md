@@ -9,11 +9,17 @@ under its own brand, with its own visual identity, its own signing identity, and
 original code and artwork**.
 
 > **What it is / what it isn't.**
-> NirixX is a *functional mock* for development and demo: no live ECU writes, no DMS backend,
-> and simulated UDS sessions when no hardware is present. Every screen, flow and string was
-> written from scratch for this project, and every image was AI-generated for NirixX — the
-> reference app's binary, logos, photos and brand assets are **not** redistributed anywhere in
-> this module; the reference APK stays untouched at the repo root as analysis material only.
+> NirixX is a working diagnostics client: since **v1.5.0** it speaks **real UDS (ISO 14229)
+> over real ISO-TP (ISO 15765-2)** through real Bluetooth-SPP / Wi-Fi-TCP / USB-CDC links to
+> an ELM327-class VCI, and acquires the vehicle VIN from the ECU. Where a dependency cannot
+> legally or physically ship (vendor VCI SDKs, OEM seed-key algorithms, per-model ODX packs,
+> campaign binaries, DMS backend) the code exposes a clean interface and the gap is documented
+> in `MISSING_DEPENDENCIES.md` — **nothing is silently faked**: screens that cannot run real
+> data say so on-screen, and the simulation path is an explicitly-labelled *training mode*.
+> Every screen, flow and string was written from scratch, and every image was AI-generated
+> for NirixX — the reference app's binary, logos, photos and brand assets are **not**
+> redistributed anywhere in this module; the reference APK stays untouched at the repo root
+> as analysis material only.
 
 ---
 
@@ -26,19 +32,76 @@ extra byte is real, on-screen content)
 |---|---|
 | Package | `com.nirixx.app` |
 | Label / tagline | **NirixX** · "Beyond Diagnostics" |
-| Version | `1.4.0` (versionCode 9) |
+| Version | `1.5.0` (versionCode 10) |
 | SDK window | **minSdk 24 (Android 7.0) → targetSdk 34 (Android 14)** |
 | Signature | own NirixX keystore, **APK Signature Scheme v2 + v3** |
 | Architecture | universal (pure Java, no native libs → all ABIs) |
-| Footprint | **50 activities · 4 services** · 69 Java sources · 121 drawable resources |
-| Database | **SQLite** (`nirixx.db`, offline-first, zero third-party deps) |
+| Footprint | **49 activities · 4 services** · 81 Java sources · 121 drawable resources |
+| Database | **SQLite** (`nirixx.db` v2, offline-first, zero third-party deps) |
 | Dependencies | zero third-party libraries — Android framework only (no AndroidX) |
 | Build | one command: `bash build.sh` (~2 min, hermetic, offline) |
 | Verification | `tools/verify_apk.py` → **21/21 checks PASS** |
+| Unit tests | `tests/run_tests.sh` → **all core suites PASS** (VIN rules, ISO-TP, UDS, NRC) |
 
 ---
 
-## 2. v1.4.0 — reference-UI parity + real database (current build)
+## 2. v1.5.0 — production-real diagnostic stack (current build)
+
+The upgrade from "reference-parity UI with a data layer" to a **real diagnostics client**.
+Full analysis: `ARCHITECTURE.md`; explicit gap ledger: `MISSING_DEPENDENCIES.md`.
+
+**Real protocol stack** (`core/`, pure Java, framework-only, unit-tested on the JVM):
+
+- `core/uds/IsoTp.java` — ISO 15765-2: SF/FF/CF/FC session layer with block-size & STmin
+  sender pacing, flow-control emission on FF, N_Bs/P2 timeouts, and `awaitResponse()` for
+  NRC 0x78 (response-pending) sequences.
+- `core/uds/UdsClient.java` — ISO 14229 services: 0x10 session, 0x11 reset, 0x14 clear-DTC,
+  0x19 read-DTC (parses `59 02` records → P/C/B/U codes), 0x22 read-DID (incl. F190 VIN),
+  0x27 security access, 0x28 communication control, 0x2E write-DID, 0x31 routine control,
+  0x34/0x36/0x37 download pipeline, 0x3E tester-present, 0x85 control-DTC-setting. Negative
+  responses raise `UdsError(sid, nrc)`; 0x78 is waited out (≤40 × 5 s).
+- `core/uds/Nrc.java` — 30+ NRCs with technician remediation hints
+  (e.g. 0x22 → "Conditions not correct — verify ignition ON, vehicle stationary, battery > 11 V").
+- `core/vin/VinRules.java` — ISO 3779 validation (I/O/Q excluded) + the **authoritative
+  33-model vehicle table** (model → variant systems → VIN prefix), longest-prefix-first match.
+- `core/vci/` — real transports: `BtLink` (RFCOMM SPP), `WifiLink` (TCP, default
+  192.168.0.10:35000), `UsbLink` (USB-host CDC-ACM, runtime permission flow), and
+  `ElmCan` — the real ELM327 dialect init (ATZ/E0/L0/H1/AT0/SP6/SH/CRA) with header-aware
+  hex frame parsing and adapter-id capture.
+- `core/diag/DiagEngine.java` — owns the chain `link → ElmCan → IsoTp → UdsClient`:
+  open link → diagnostic session (10 01, 10 03 fallback) → read VIN (22 F190) → ISO 3779
+  validate → match against the 33-model table. Every stage reports structured failure
+  (stage, error, NRC + hint). It **never fabricates** a VIN or a match.
+- `core/role/Roles.java` — module-level RBAC. **Dealer Service** = connect, auto-VIN,
+  diagnose (live/DTC/IO/routine), VHR, reports, battery, logs, recording. **Dealer
+  Engineer** = everything incl. flashing, VIN-write, campaigns, VCI firmware, app update.
+  Enforced in `BaseActivity.go()` (navigation) **and** hard-guarded in the operation
+  activities themselves (`FlashActivity`, `WriteDataActivity`).
+
+**Where it lands in the UI:**
+
+- *Add Device*: BT list pairs real links; **Wi-Fi panel = real `WifiManager` scan** for
+  `NirixiLINK*` hotspots + editable endpoint; **USB panel = real `UsbManager` enumeration**
+  with VID/PID and runtime permission. Connect → `DiagEngine.connectAndIdentify()` on a
+  worker thread → vehicle identified → Diagnostic Section (matched) or Vehicle List
+  (VIN read, unmatched); failure shows stage + NRC hint with RETRY / manual selection.
+- *VIN Diagnosis*: with a live engine it performs the **real VIN read** (frame-level console +
+  `UdsLog`); without hardware it runs the clearly-badged **TRAINING LINK (no VCI)** path.
+- *Vehicle DB v2*: the supplied 33-model table is the only vehicle source (exact VIN first,
+  then longest-prefix rule match); ECU rows per model derive from its variant-systems string
+  (EMS/ABS/ICU/ISG/EV → tx/rx ids, manufacturer, tests) — data-driven, no `if (vehicle == …)`.
+- *VHR physical tab*: real photo capture via SAF (`ACTION_OPEN_DOCUMENT`) → copied into
+  `Reports/`, thumbnailed, stored against the VHR item.
+
+**Integration boundaries (implemented interfaces, missing third-party halves):** Kvaser /
+TechPro vendor SDKs, OEM 0x27 seed-key algorithm, per-model ODX/CDD packs, campaign binaries
++ eligibility backend, DMS backend, EV battery-pack definitions. Each row in
+`MISSING_DEPENDENCIES.md` states why, where it plugs in, what's already implemented behind
+the interface, and the exact action to close it.
+
+---
+
+## 2A. v1.4.0 — reference-UI parity + real database
 
 Driven page-by-page by the `Ridescan UI Reference Images/` folder (137 screenshots, two UDS
 session logs, the sample `TVS Ronin … _VHR.pdf` and the DMS communication captures):
@@ -424,7 +487,8 @@ NirixX/
 │   ├── res/                         # layouts, values, 77 drawables (all original art)
 │   └── src/com/nirixx/app/          # 63 Java files, framework-only
 │        ├── Ui.java / BaseActivity.java / Session.java / Perms.java
-│        ├── vci/                    # transport layer (see §5)
+│        ├── core/                   # v1.5.0 real stack (see §2): uds/ vin/ vci/ diag/ role/
+│        ├── vci/                    # VCI model/manager (device naming, last-live registry)
 │        └── … 49 activities + 4 services
 └── README.md (this file)
 ```
@@ -436,13 +500,17 @@ NirixX/
   `VERIFICATION.md` (signature, DEX parse, per-screen id resolution, reachability, Android
   12+ checklist). Runtime behavior is best validated on a real Android 13/14 phone; the
   built-in crash reporter turns any device-only crash into a paste-able trace on next launch.
-- UDS sessions are simulated until real hardware is paired (by design — see §5.2).
+- UDS is **real** when a VCI is paired (§2): session, VIN, DTCs, writes over ISO-TP. The
+  simulated path remains only as an explicitly-badged *training mode* when no link is live.
+  Vendor-VCI SDKs (Kvaser/TechPro), the OEM seed-key algorithm, ODX packs, campaign binaries
+  and the DMS backend are third-party halves that cannot ship here — each is behind an
+  implemented interface and listed in `MISSING_DEPENDENCIES.md`.
 - Image-generation quota shaped Phase 4: several module arts are PIL-recomposed from masters
   rather than wholly new renders (visually distinct, same quality bar).
 
 ## 12. Roadmap hooks
 
-- UDS session layer over `VciTransport` (0x10/0x27/0x22/0x2E/0x31/0x34–0x37 state machine).
+- ~~UDS session layer~~ **DONE in v1.5.0** — full ISO-TP + UDS client in `core/uds` (see §2).
 - Real PDF export (embedded writer) for VHR/diagnostic reports.
 - VCI detail pages with per-model spec sheets; OTA delta updates in the stub self-update flow.
 

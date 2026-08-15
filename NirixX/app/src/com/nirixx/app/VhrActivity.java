@@ -222,7 +222,15 @@ public class VhrActivity extends BaseActivity {
             card.setBackgroundResource(R.drawable.bg_card);
             card.setPadding(Ui.dp(this, 12), Ui.dp(this, 12), Ui.dp(this, 12), Ui.dp(this, 12));
 
-            card.addView(Ui.photoThumb(this));
+            final LinearLayout thumb = Ui.photoThumb(this);
+            thumb.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) { pickImage(it[0]); }
+            });
+            thumb.setOnLongClickListener(new View.OnLongClickListener() {
+                public boolean onLongClick(View v) { clearImage(it[0], thumb); return true; }
+            });
+            card.addView(thumb);
+            showStoredImage(it[0], thumb);
 
             LinearLayout right = new LinearLayout(this);
             right.setOrientation(LinearLayout.VERTICAL);
@@ -279,6 +287,83 @@ public class VhrActivity extends BaseActivity {
             host.addView(card, lp);
         }
         next("Next");
+    }
+
+    // ---------------------------------------------------------------- photos
+    private static final int REQ_IMG = 41;
+    private String pendingPhotoItem;
+
+    /** Real gallery/SAF pick — framework-only (no extra libraries, no
+     *  storage permission on API 19+).  Selected image is copied into the
+     *  Reports folder so it survives URI revocation and embeds into the PDF. */
+    private void pickImage(String item) {
+        pendingPhotoItem = item;
+        android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT);
+        i.addCategory(android.content.Intent.CATEGORY_OPENABLE);
+        i.setType("image/*");
+        try {
+            startActivityForResult(i, REQ_IMG);
+        } catch (Exception e) {
+            toast("No gallery available on this device");
+        }
+    }
+
+    private void clearImage(String item, LinearLayout thumb) {
+        Session.vhrData.remove("photo|" + item);
+        db.putInput(Session.sessionKey, "photo", item, "");
+        android.widget.ImageView iv = (android.widget.ImageView) thumb.getChildAt(0);
+        iv.setImageResource(R.drawable.ic_camera);
+        iv.setScaleType(android.widget.ImageView.ScaleType.CENTER_INSIDE);
+        toast("Image removed — tap to pick a new one");
+    }
+
+    private void showStoredImage(String item, LinearLayout thumb) {
+        String path = Session.vhrData.get("photo|" + item);
+        if (path == null || path.length() == 0) return;
+        android.graphics.Bitmap bmp = decodeScaled(path, 160);
+        if (bmp != null) {
+            android.widget.ImageView iv = (android.widget.ImageView) thumb.getChildAt(0);
+            iv.setImageBitmap(bmp);
+            iv.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, android.content.Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != REQ_IMG || resultCode != RESULT_OK || data == null || data.getData() == null) return;
+        String item = pendingPhotoItem;
+        pendingPhotoItem = null;
+        if (item == null) return;
+        try {
+            java.io.InputStream in = getContentResolver().openInputStream(data.getData());
+            java.io.File dir = new java.io.File(getExternalFilesDir(null), "Reports");
+            dir.mkdirs();
+            java.io.File out = new java.io.File(dir,
+                    "vhr_" + item.replaceAll("[^A-Za-z0-9]+", "_") + ".jpg");
+            java.io.FileOutputStream fos = new java.io.FileOutputStream(out);
+            byte[] buf = new byte[8192]; int n;
+            while ((n = in.read(buf)) > 0) fos.write(buf, 0, n);
+            fos.close(); in.close();
+            Session.vhrData.put("photo|" + item, out.getAbsolutePath());
+            db.putInput(Session.sessionKey, "photo", item, out.getAbsolutePath());
+            render();               // re-draw current tab so thumbnails refresh
+        } catch (Exception e) {
+            toast("Couldn't read that image: " + e.getMessage());
+        }
+    }
+
+    private static android.graphics.Bitmap decodeScaled(String path, int maxDim) {
+        try {
+            android.graphics.BitmapFactory.Options o1 = new android.graphics.BitmapFactory.Options();
+            o1.inJustDecodeBounds = true;
+            android.graphics.BitmapFactory.decodeFile(path, o1);
+            int scale = 1;
+            while ((o1.outWidth / (scale * 2) > maxDim) || (o1.outHeight / (scale * 2) > maxDim)) scale *= 2;
+            android.graphics.BitmapFactory.Options o2 = new android.graphics.BitmapFactory.Options();
+            o2.inSampleSize = scale;
+            return android.graphics.BitmapFactory.decodeFile(path, o2);
+        } catch (Exception e) { return null; }
     }
 
     // ---------------------------------------------------------------- SUMMARY

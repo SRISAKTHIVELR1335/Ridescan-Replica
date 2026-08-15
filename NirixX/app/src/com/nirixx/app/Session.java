@@ -20,7 +20,7 @@ public final class Session {
     public static String dealerCode = "10814";
     public static String dealerBranch = "10814";
     public static String dealerPhone = "";
-    public static String userType = "Service Technician";
+    public static String userType = "Dealer Service";
 
     // ---- VCI (connection is always one of BT / WIFI / USB) ----
     public static boolean vciConnected = false;
@@ -57,7 +57,28 @@ public final class Session {
     /** Session key in the store format: <vciSerial><ddMMyyyyHHmmss>, e.g. 50485617032026113515. */
     public static String sessionKey = null;
 
+    /** Resolve the current vehicle row from the DB when none is selected yet
+     *  (fresh install / after DB upgrade): VIN match first, Ronin as fallback. */
+    public static void ensureVehicle(Context c) {
+        if (vehicleId > 0) return;
+        try {
+            Db.Vehicle v = Db.get(c).vehicleByVin(selectedVin);
+            if (v == null) {
+                for (Db.Vehicle x : Db.get(c).vehicles())
+                    if ("TVS Ronin".equals(x.model)) { v = x; break; }
+            }
+            if (v == null) return;
+            selectVehicle(v.id, v.model, v.variant, v.type, v.vinSample.length() > 0 ? v.vinSample : selectedVin, v.image);
+            java.util.List<Db.Ecu> es = Db.get(c).ecus(v.id);
+            if (!es.isEmpty()) {
+                Db.Ecu e = es.get(0);
+                selectEcu(e.id, e.name, e.code, e.tx, e.rx);
+            }
+        } catch (Exception ignored) { }
+    }
+
     public static String ensureSession(Context c) {
+        ensureVehicle(c);
         if (sessionKey == null) {
             String ts = new SimpleDateFormat("ddMMyyyyHHmmss", Locale.US).format(new Date());
             sessionKey = vciSerial + ts;

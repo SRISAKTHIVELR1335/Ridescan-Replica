@@ -38,6 +38,9 @@ public final class VciManager {
 
     private VciManager() { }
 
+    /** label -> live BluetoothDevice from the most recent real scan/bonded list. */
+    public final java.util.Map<String, BluetoothDevice> lastLive = new java.util.HashMap<String, BluetoothDevice>();
+
     public boolean bluetoothAvailable() {
         return BluetoothAdapter.getDefaultAdapter() != null;
     }
@@ -72,6 +75,7 @@ public final class VciManager {
                     if (upper.contains("OBD") || upper.contains("VCI") || upper.contains("ELM")
                             || upper.contains("NRX") || upper.contains("TZ-") || upper.contains("NIRIXX")) {
                         final String fName = nm;
+                        lastLive.put(fName, d);
                         cb.onFound(fName, "Paired adapter", "BT Classic", "vci", true);
                     }
                 }
@@ -84,6 +88,7 @@ public final class VciManager {
                             String nm;
                             try { nm = dev.getName(); } catch (SecurityException se) { nm = null; }
                             final String label = nm != null ? nm : dev.getAddress();
+                            lastLive.put(label, dev);
                             cb.onFound(label, "Discovered · RSSI " + rssi + " dBm", "BT Classic", "vci", true);
                         } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(intent.getAction())) {
                             cb.onFinished(true);

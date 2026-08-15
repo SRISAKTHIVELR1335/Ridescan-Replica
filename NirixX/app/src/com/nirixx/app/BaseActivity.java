@@ -75,7 +75,18 @@ public abstract class BaseActivity extends Activity {
         if (b != null) b.setVisibility(View.INVISIBLE);
     }
 
+    /** Role-guarded navigation: every screen transition funnels through here,
+     *  so a Dealer Service account genuinely cannot open engineering modules
+     *  (roles are enforced, not merely hidden). */
     protected void go(Class<?> target) {
+        String module = com.nirixx.app.core.role.Roles.moduleForScreen(target.getSimpleName());
+        if (!com.nirixx.app.core.role.Roles.can(Session.userType, module)) {
+            Ui.dialog(this, "Not permitted",
+                    "Role \u201c" + Session.userType + "\u201d has no access to this module.\n\n"
+                            + "Sign in as Dealer Engineer for engineering functions.",
+                    "OK", null, null, null).show();
+            return;
+        }
         startActivity(new Intent(this, target));
     }
 

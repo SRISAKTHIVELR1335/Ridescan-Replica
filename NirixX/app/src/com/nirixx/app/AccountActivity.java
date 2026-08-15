@@ -29,7 +29,7 @@ public class AccountActivity extends BaseActivity {
 
         content.addView(Ui.sectionBar(this, "APPLICATION & SESSION", null));
         LinearLayout app = Ui.card(this);
-        app.addView(Ui.kvRow(this, "App Version", "1.4.0 (build 9)", false));
+        app.addView(Ui.kvRow(this, "App Version", "1.5.0 (build 10)", false));
         app.addView(Ui.kvRow(this, "Signed in as", Session.userType, false));
         app.addView(Ui.kvRow(this, "Session ID", Session.sessionKey == null ? "—" : Session.sessionKey, false));
         app.addView(Ui.kvRow(this, "Connectivity", Session.connectivity, false));

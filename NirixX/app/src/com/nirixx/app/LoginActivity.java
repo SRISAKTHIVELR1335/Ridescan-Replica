@@ -20,7 +20,7 @@ public class LoginActivity extends BaseActivity {
     private TextView spnRole, spnVci, btnLogin;
     private View conBT, conWIFI, conUSB;
     private String connectivity = "BLUETOOTH";
-    private String role = "Service Technician";
+    private String role = "Dealer Service";
     private String vci = "NirixiLINK_504856";
     private Db db;
 

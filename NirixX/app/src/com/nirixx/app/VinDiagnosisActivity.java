@@ -84,7 +84,9 @@ public class VinDiagnosisActivity extends BaseActivity {
         Session.ensureSession(this);
 
         content.addView(Ui.crumbs(this, new String[]{"Home", "VIN Based Diagnosis"}));
-        content.addView(Ui.section(this, "READING VIN FROM ECU"));
+        content.addView(Ui.section(this,
+                com.nirixx.app.core.diag.DiagEngine.ready() ? "READING VIN FROM ECU — LIVE LINK"
+                        : "READING VIN FROM ECU — TRAINING LINK (no VCI)"));
 
         final LinearLayout console = new LinearLayout(this);
         console.setOrientation(LinearLayout.VERTICAL);
@@ -93,21 +95,90 @@ public class VinDiagnosisActivity extends BaseActivity {
         console.setPadding(p, p, p, p);
         content.addView(console);
 
+        if (com.nirixx.app.core.diag.DiagEngine.ready()) {
+            realVinRead(console);
+        } else {
+            simulatedVinRead(console);
+        }
+    }
+
+    /** Real path: the VCI/CAN/ISO-TP/UDS stack — never a fabricated answer. */
+    private void realVinRead(final LinearLayout console) {
+        final Dialog prog = Ui.progressDialog(this, "Reading VIN from the vehicle…");
+        prog.show();
+        final com.nirixx.app.core.diag.DiagEngine.Progress cb =
+                new com.nirixx.app.core.diag.DiagEngine.Progress() {
+                    public void onStep(final String step) {
+                        consoleLine(console, "INFO", "… " + step);
+                    }
+                    public void onFrame(String dir, String frame) {
+                        consoleLine(console, dir, frame);
+                    }
+                };
+        new Thread(new Runnable() { public void run() {
+            final com.nirixx.app.core.diag.DiagEngine.Result r =
+                    com.nirixx.app.core.diag.DiagEngine.readVinAgain(VinDiagnosisActivity.this, cb);
+            h.post(new Runnable() { public void run() {
+                prog.dismiss();
+                if (r.ok) {
+                    showResult(r.vin);
+                } else {
+                    showBusError(r.stage, r.error, r.nrc);
+                }
+            }});
+        }}, "vin-read").start();
+    }
+
+    /** Training path — explicitly labelled simulated link, used only without a VCI. */
+    private void simulatedVinRead(final LinearLayout console) {
         final Dialog prog = Ui.progressDialog(this, "Opening UDS session…");
         prog.show();
         h.postDelayed(new Runnable() { public void run() { prog.dismiss(); } }, 900);
 
-        final String useVin = pickVin();
-        SimEcu.readVin(useVin, new SimEcu.Listener() {
+        consoleLine(console, "INFO", "TRAINING LINK — simulated UDS (pair a VCI for live data)");
+        SimEcu.readVin(pickVin(), new SimEcu.Listener() {
             public void onLine(final String dir, final String payload) {
-                TextView line = Ui.tv(VinDiagnosisActivity.this,
-                        SimEcu.stamp() + "  " + dir + ": --> " + payload,
-                        11.5f, "TX".equals(dir) ? 0xFF9AD0FF : 0xFF9BEFC4, false);
-                console.addView(line);
-                UdsLog.log(VinDiagnosisActivity.this, dir, payload);
+                consoleLine(console, dir, payload);
             }
         }, new SimEcu.VinListener() {
             public void onVin(String vin) { showResult(vin); }
+        });
+    }
+
+    private void consoleLine(final LinearLayout console, final String dir, final String payload) {
+        h.post(new Runnable() { public void run() {
+            TextView line = Ui.tv(VinDiagnosisActivity.this,
+                    SimEcu.stamp() + "  " + dir + ": --> " + payload,
+                    11.5f, "TX".equals(dir) ? 0xFF9AD0FF : 0xFF9BEFC4, false);
+            console.addView(line);
+        }});
+        UdsLog.log(VinDiagnosisActivity.this, dir, payload);
+    }
+
+    private void showBusError(String stage, String error, com.nirixx.app.core.uds.Nrc nrc) {
+        content.addView(Ui.section(this, "ECU DID NOT ANSWER"));
+        LinearLayout err = Ui.card(this);
+        err.addView(Ui.tv(this, "Stage: " + (stage == null ? "link" : stage), 13f, 0xFF5A6472, false));
+        err.addView(Ui.tv(this, error == null ? "Unknown failure" : error, 14f, 0xFF1A2138, true));
+        if (nrc != null && nrc.userHint != null && nrc.userHint.length() > 0) {
+            err.addView(Ui.tv(this, nrc.userHint, 12.5f, 0xFF5A6472, false));
+        }
+        content.addView(err);
+        TextView retry = Ui.navyBtn(this, "RETRY");
+        LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-1, -2);
+        rp.setMargins(0, Ui.dp(this, 10), 0, 0);
+        content.addView(retry, rp);
+        retry.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { runVinRead(); }
+        });
+        TextView manual = Ui.navyBtn(this, "OPEN VEHICLE SELECTION");
+        manual.setBackgroundResource(R.drawable.bg_box_outline);
+        manual.setTextColor(0xFF14276F);
+        LinearLayout.LayoutParams mp = new LinearLayout.LayoutParams(-1, -2);
+        mp.setMargins(0, Ui.dp(this, 8), 0, Ui.dp(this, 12));
+        content.addView(manual, mp);
+        manual.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { go(VehicleListActivity.class); finish(); }
         });
     }
 
