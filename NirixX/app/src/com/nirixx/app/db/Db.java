@@ -19,7 +19,7 @@ import java.util.List;
 public final class Db extends SQLiteOpenHelper {
 
     private static final String NAME = "nirixx.db";
-    private static final int VER = 2;
+    private static final int VER = 3;
     private static Db inst;
 
     public static synchronized Db get(Context c) {
@@ -42,6 +42,7 @@ public final class Db extends SQLiteOpenHelper {
     public static final class TestDef {                  // kind: live|io|routine|write|phys
         public long id; public long ecuId; public String kind, name, unit, category;
         public double vmin, vmax; public int writable, sort;
+        public String addr;                              // bus address (TestAddr grammar) or null
     }
     public static final class Dtc {
         public long id; public long ecuId; public String code, descr;
@@ -67,7 +68,11 @@ public final class Db extends SQLiteOpenHelper {
         db.execSQL("CREATE TABLE tests(test_id INTEGER PRIMARY KEY AUTOINCREMENT," +
                 " ecu_id INTEGER REFERENCES ecus(ecu_id) ON DELETE CASCADE," +
                 " kind TEXT, name TEXT, unit TEXT, vmin REAL, vmax REAL, category TEXT," +
-                " writable INTEGER DEFAULT 0, sort INTEGER)");
+                " writable INTEGER DEFAULT 0, sort INTEGER, addr TEXT)");
+        db.execSQL("CREATE TABLE manuals(manual_id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                " name TEXT, path TEXT, size INTEGER, added INTEGER)");
+        db.execSQL("CREATE TABLE flash_bins(bin_id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                " name TEXT, path TEXT, size INTEGER, module TEXT, added INTEGER)");
         db.execSQL("CREATE TABLE vhr_items(item_id INTEGER PRIMARY KEY AUTOINCREMENT," +
                 " vehicle_id INTEGER REFERENCES vehicles(vehicle_id) ON DELETE CASCADE," +
                 " name TEXT, unit TEXT, lo TEXT, hi TEXT, kind TEXT, sort INTEGER)");  // kind: VAL|QUAL|PHOTO
@@ -98,7 +103,7 @@ public final class Db extends SQLiteOpenHelper {
     public void onUpgrade(SQLiteDatabase db, int o, int n) {
         String[] tables = {"roles","users","vehicles","ecus","tests","vhr_items","dtc_lib",
                 "flash_files","sessions","logs","stream_samples","test_inputs","iupr_history",
-                "vhr_reports","configs"};
+                "vhr_reports","configs","manuals","flash_bins"};
         for (int i = 0; i < tables.length; i++) db.execSQL("DROP TABLE IF EXISTS " + tables[i]);
         onCreate(db);
     }
@@ -213,7 +218,8 @@ public final class Db extends SQLiteOpenHelper {
 
         // ---- configs -------------------------------------------------------
         setConfig(db, "support_number", "+917969478770");
-        setConfig(db, "app_version", "V 1.5.0");
+        backfillAddrs(db);
+        setConfig(db, "app_version", "V 1.6.0");
         setConfig(db, "connectivity", "BLUETOOTH");
         setConfig(db, "last_vci", "NirixiLINK_504856");
         setConfig(db, "dms_domain", "DMS");
@@ -558,6 +564,7 @@ public final class Db extends SQLiteOpenHelper {
         t.unit = c.getString(4); t.vmin = c.getDouble(5); t.vmax = c.getDouble(6);
         t.category = c.getString(7) == null ? "" : c.getString(7);
         t.writable = c.getInt(8); t.sort = c.getInt(9);
+        t.addr = c.getColumnCount() > 10 ? c.getString(10) : null;
         return t;
     }
 
@@ -574,12 +581,96 @@ public final class Db extends SQLiteOpenHelper {
         return out;
     }
 
+    /** Flash file name published for an ECU, or null when none exists —
+     *  never invent one: the UI gates on null. */
     public String flashFile(long ecuId) {
         Cursor c = getReadableDatabase().rawQuery(
                 "SELECT filename FROM flash_files WHERE ecu_id=" + ecuId + " LIMIT 1", null);
-        String f = c.moveToFirst() ? c.getString(0) : "K6060799_03_S.mot";
+        String f = c.moveToFirst() ? c.getString(0) : null;
         c.close();
         return f;
+    }
+
+    /** DTC description lookup across the whole library (any ECU); null = unknown. */
+    public String dtcDescr(String code) {
+        Cursor c = getReadableDatabase().rawQuery(
+                "SELECT descr FROM dtc_lib WHERE code=? LIMIT 1", new String[]{code});
+        String s = c.moveToFirst() ? c.getString(0) : null;
+        c.close();
+        return s;
+    }
+
+    // ------------------------------------------------------------------ manuals
+    public long addManual(String name, String path, long size) {
+        ContentValues cv = new ContentValues();
+        cv.put("name", name); cv.put("path", path); cv.put("size", size);
+        cv.put("added", System.currentTimeMillis());
+        return getWritableDatabase().insert("manuals", null, cv);
+    }
+
+    /** id, name, path, size, added — real records of user-imported documents. */
+    public List<String[]> manuals() {
+        List<String[]> out = new ArrayList<String[]>();
+        Cursor c = getReadableDatabase().rawQuery(
+                "SELECT manual_id, name, path, size, added FROM manuals ORDER BY added DESC", null);
+        while (c.moveToNext())
+            out.add(new String[]{String.valueOf(c.getLong(0)), c.getString(1), c.getString(2),
+                    String.valueOf(c.getLong(3)), String.valueOf(c.getLong(4))});
+        c.close();
+        return out;
+    }
+
+    public void deleteManual(long id) {
+        getWritableDatabase().delete("manuals", "manual_id=" + id, null);
+    }
+
+    // ------------------------------------------------------------------ flash binaries
+    public long addFlashBin(String name, String path, long size, String module) {
+        ContentValues cv = new ContentValues();
+        cv.put("name", name); cv.put("path", path); cv.put("size", size); cv.put("module", module);
+        cv.put("added", System.currentTimeMillis());
+        return getWritableDatabase().insert("flash_bins", null, cv);
+    }
+
+    public List<String[]> flashBins() {
+        List<String[]> out = new ArrayList<String[]>();
+        Cursor c = getReadableDatabase().rawQuery(
+                "SELECT bin_id, name, path, size, module, added FROM flash_bins ORDER BY added DESC", null);
+        while (c.moveToNext())
+            out.add(new String[]{String.valueOf(c.getLong(0)), c.getString(1), c.getString(2),
+                    String.valueOf(c.getLong(3)), c.getString(4), String.valueOf(c.getLong(5))});
+        c.close();
+        return out;
+    }
+
+    public void deleteFlashBin(long id) {
+        getWritableDatabase().delete("flash_bins", "bin_id=" + id, null);
+    }
+
+    // ------------------------------------------------------------------ address backfill
+    /** Map seeded test rows to their real bus address where one is published:
+     *  SAE J1979 Mode-01/Mode-09 (public standard) or the captured UDS DID. */
+    private static void backfillAddrs(SQLiteDatabase db) {
+        String[][] map = {
+                {"Read Vehicle Information (VIN)", "did:F190"},
+                {"VIN (F190)", "did:F190"},
+                {"Battery Voltage", "pid:42"},
+                {"Engine Temperature", "pid:05"},
+                {"Engine Speed", "pid:0C"},
+                {"Vehicle speed", "pid:0D"},
+                {"Throttle Position Sensor", "pid:11"},
+                {"Intake Air Pressure Sensor", "pid:0B"},
+                {"Intake Air Temperature", "pid:0F"},
+                {"Manifold Air Pressure Sensor", "pid:0B*10"},
+                {"CVN", "m09:06"},
+                {"CALID", "m09:04"},
+                {"CAL ID", "m09:04"},
+        };
+        for (int i = 0; i < map.length; i++) {
+            ContentValues cv = new ContentValues();
+            cv.put("addr", map[i][1]);
+            db.update("tests", cv, "name=?", new String[]{map[i][0]});
+        }
     }
 
     public List<String[]> vhrItems(long vehicleId) {
@@ -662,10 +753,35 @@ public final class Db extends SQLiteOpenHelper {
         getWritableDatabase().insert("stream_samples", null, cv);
     }
 
+    /** Most recent real sampled value for a test in this session, or null. */
+    public String lastSample(String sessionKey, long testId) {
+        Cursor c = getReadableDatabase().rawQuery(
+                "SELECT value FROM stream_samples WHERE session_key=? AND test_id=? "
+                        + "ORDER BY ts DESC LIMIT 1",
+                new String[]{sessionKey, String.valueOf(testId)});
+        String v = c.moveToFirst() ? c.getString(0) : null;
+        c.close();
+        return v;
+    }
+
     public void putInput(String sessionKey, String kind, String key, String value) {
         ContentValues cv = new ContentValues();
         cv.put("session_key", sessionKey); cv.put("kind", kind); cv.put("key", key); cv.put("value", value);
         getWritableDatabase().insert("test_inputs", null, cv);
+    }
+
+    /** Real count: session log lines written since local midnight. */
+    public int logsToday() {
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        cal.set(java.util.Calendar.HOUR_OF_DAY, 0);
+        cal.set(java.util.Calendar.MINUTE, 0);
+        cal.set(java.util.Calendar.SECOND, 0);
+        cal.set(java.util.Calendar.MILLISECOND, 0);
+        Cursor c = getReadableDatabase().rawQuery(
+                "SELECT COUNT(*) FROM logs WHERE ts >= ?", new String[]{String.valueOf(cal.getTimeInMillis())});
+        int n = c.moveToFirst() ? c.getInt(0) : 0;
+        c.close();
+        return n;
     }
 
     public String lastInput(String sessionKey, String kind, String key) {

@@ -84,6 +84,11 @@ public class LoginActivity extends BaseActivity {
             public void onClick(View v) { go(AddDeviceActivity.class); }
         });
 
+        // New-dealer registration link (real flow: Register → OTP → New PIN)
+        findViewById(R.id.txtRegister).setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { go(RegisterActivity.class); }
+        });
+
         View.OnClickListener connClick = new View.OnClickListener() {
             public void onClick(View v) {
                 connectivity = v == conBT ? "BLUETOOTH" : (v == conWIFI ? "WIFI" : "USB");

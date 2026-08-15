@@ -85,7 +85,20 @@ public final class UdsClient {
 
     /** 0x19 02 — Read DTC by status mask. Returns parsed records. */
     public DtcRecord[] readDtc(int statusMask) throws Exception {
-        byte[] d = positive(uds(new byte[]{0x19, 0x02, (byte) statusMask}, 4000), 0x19);
+        return parseDtcResponse(positive(uds(new byte[]{0x19, 0x02, (byte) statusMask}, 4000), 0x19));
+    }
+
+    /** Static parse of a positive 59 02 payload (kept reusable for traced paths).
+     *  Accepts either the full response [59 02 …] or a SID-stripped body [02 …]. */
+    public static DtcRecord[] parseDtcResponse(byte[] resp) {
+        if (resp == null) return new DtcRecord[0];
+        byte[] d = resp;
+        if (d.length >= 2 && (d[0] & 0xFF) == 0x59) {          // strip 59 02 header
+            if (d.length >= 2 && (d[1] & 0xFF) != 0x02) return new DtcRecord[0];
+            byte[] body = new byte[d.length - 1];
+            System.arraycopy(d, 1, body, 0, body.length);
+            d = body;
+        }
         // d = [subfn, availabilityMask, DTC hi mid lo status]*
         if (d.length < 2) return new DtcRecord[0];
         int n = (d.length - 2) / 4;
@@ -164,6 +177,28 @@ public final class UdsClient {
     /** 0x28 — Communication Control. */
     public void communicationControl(int controlType, int commType) throws Exception {
         positive(uds(new byte[]{0x28, (byte) controlType, (byte) commType}, 2500), 0x28);
+    }
+
+    /** 0x2F — Input Output Control By Identifier.
+     *  controlParam: 0x00 returnControlToECU, 0x03 shortTermAdjustment.
+     *  state is the actuator control-state bytestring (may be null/short). */
+    public byte[] ioControl(int did, int controlParam, byte[] state) throws Exception {
+        int n = state == null ? 0 : state.length;
+        byte[] req = new byte[4 + n];
+        req[0] = 0x2F; req[1] = (byte) (did >> 8); req[2] = (byte) did;
+        req[3] = (byte) controlParam;
+        if (n > 0) System.arraycopy(state, 0, req, 4, n);
+        return positive(uds(req, 4000), 0x2F);
+    }
+
+    /** 0x23 — Read Memory By Address (4-byte address, 2-byte size). */
+    public byte[] readMemory(long address, int size) throws Exception {
+        byte[] req = new byte[8];
+        req[0] = 0x23; req[1] = 0x42;   // addrAndLengthFormatId: 4-byte addr, 2-byte size
+        req[2] = (byte) (address >> 24); req[3] = (byte) (address >> 16);
+        req[4] = (byte) (address >> 8);  req[5] = (byte) address;
+        req[6] = (byte) (size >> 8);     req[7] = (byte) size;
+        return positive(uds(req, 4000), 0x23);
     }
 
     // ------------------------------------------------------------ DTC record

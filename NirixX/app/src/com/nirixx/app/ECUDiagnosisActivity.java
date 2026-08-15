@@ -7,7 +7,6 @@ import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import com.nirixx.app.sim.SimEcu;
 
 /** ECU Diagnosis page (reference): vehicle image + live battery + updates on
  *  top, "VIN - xxx | EMS-OBDII" section bar, then the 2-column function grid:
@@ -45,13 +44,16 @@ public class ECUDiagnosisActivity extends BaseActivity {
         LinearLayout tiles = new LinearLayout(this);
         tiles.setOrientation(LinearLayout.VERTICAL);
         LinearLayout b = Ui.statTile(this, R.drawable.ic_battery_sm, "Battery Voltage",
-                String.format("%.6f V", Session.batteryVolts));
+                Session.batteryVolts > 0
+                        ? String.format(java.util.Locale.US, "%.2f V", Session.batteryVolts)
+                        : "—");
         batt = (TextView) b.getTag();
         LinearLayout.LayoutParams m = new LinearLayout.LayoutParams(-1, -2);
         m.setMargins(0, 0, 0, Ui.dp(this, 8));
         tiles.addView(b, new LinearLayout.LayoutParams(m));
-        tiles.addView(Ui.statTile(this, R.drawable.ic_refresh, "New Updates", "Available"),
-                new LinearLayout.LayoutParams(m));
+        LinearLayout upd = Ui.statTile(this, R.drawable.ic_refresh, "App Version",
+                "Installed " + com.nirixx.app.db.Db.get(this).config("app_version", "V 1.6.0"));
+        tiles.addView(upd, new LinearLayout.LayoutParams(m));
         top.addView(tiles, new LinearLayout.LayoutParams(0, -2, 1f));
         content.addView(top);
 
@@ -94,14 +96,30 @@ public class ECUDiagnosisActivity extends BaseActivity {
         });
     }
 
+    /** Real rail voltage via the adapter (ATRV) when a link is live. */
     private void streamVolts() {
+        if (!com.nirixx.app.core.diag.DiagOps.live()) {
+            if (batt != null && Session.batteryVolts < 0) batt.setText("—");
+            return;
+        }
         h.postDelayed(new Runnable() {
             public void run() {
                 if (!tick) return;
-                if (batt != null) batt.setText(String.format("%.6f V", SimEcu.nextVolts()));
-                h.postDelayed(this, 1000);
+                if (com.nirixx.app.core.diag.DiagOps.live()) {
+                    com.nirixx.app.core.diag.DiagOps.adapterVoltage(ECUDiagnosisActivity.this,
+                            new com.nirixx.app.core.diag.DiagOps.Cb<Double>() {
+                                public void ok(Double v) {
+                                    Session.batteryVolts = v.doubleValue();
+                                    if (batt != null) batt.setText(String.format(
+                                            java.util.Locale.US, "%.2f V", v));
+                                }
+                                public void err(String w, String d,
+                                                com.nirixx.app.core.uds.Nrc n) { }
+                            });
+                }
+                h.postDelayed(this, 3000);
             }
-        }, 1000);
+        }, 1200);
     }
 
     @Override

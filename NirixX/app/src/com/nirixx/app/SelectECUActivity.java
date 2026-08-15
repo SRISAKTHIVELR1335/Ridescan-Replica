@@ -7,7 +7,6 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import com.nirixx.app.db.Db;
-import com.nirixx.app.sim.SimEcu;
 import java.util.List;
 
 /** Diagnostic Section page (reference "Select ECU"): vehicle image from the DB,
@@ -53,14 +52,19 @@ public class SelectECUActivity extends BaseActivity {
         LinearLayout tiles = new LinearLayout(this);
         tiles.setOrientation(LinearLayout.VERTICAL);
         LinearLayout dtc = Ui.statTile(this, R.drawable.ic_engine,
-                Session.faultsFound ? "Fault Codes Found" : "Faults Codes Not Found",
-                Session.faultsFound ? "Tap DTC tile to review" : "All systems clean");
-        ((TextView) dtc.getTag()).setTextColor(Session.faultsFound ? 0xFFE53935 : 0xFF2E9E43);
+                Session.dtcScanned ? (Session.faultsFound ? "Fault Codes Found" : "No Fault Codes")
+                        : "DTC Status",
+                Session.dtcScanned ? (Session.faultsFound ? "Tap DTC tile to review" : "Scanned — none stored")
+                        : "Not scanned yet");
+        ((TextView) dtc.getTag()).setTextColor(
+                !Session.dtcScanned ? 0xFF5A6472 : Session.faultsFound ? 0xFFE53935 : 0xFF2E9E43);
         LinearLayout.LayoutParams m = new LinearLayout.LayoutParams(-1, -2);
         m.setMargins(0, 0, 0, Ui.dp(this, 8));
         tiles.addView(dtc, m);
         LinearLayout b = Ui.statTile(this, R.drawable.ic_battery_sm, "Battery Voltage",
-                String.format("%.6f V", Session.batteryVolts));
+                Session.batteryVolts > 0
+                        ? String.format(java.util.Locale.US, "%.2f V", Session.batteryVolts)
+                        : "—");
         batt = (TextView) b.getTag();
         tiles.addView(b, new LinearLayout.LayoutParams(m));
         tiles.addView(Ui.statTile(this, R.drawable.ic_refresh, "New Updates", "Available"),
@@ -158,14 +162,21 @@ public class SelectECUActivity extends BaseActivity {
         go(ECUDiagnosisActivity.class);
     }
 
+    /** Real rail voltage, only when a VCI is live; otherwise a literal "—". */
     private void streamVolts() {
         h.postDelayed(new Runnable() {
             public void run() {
                 if (!tick) return;
-                if (batt != null) batt.setText(String.format("%.6f V", SimEcu.nextVolts()));
-                h.postDelayed(this, 1000);
+                if (batt != null && !com.nirixx.app.core.diag.DiagOps.live()) {
+                    batt.setText(Session.batteryVolts > 0
+                            ? String.format(java.util.Locale.US, "%.2f V (last)", Session.batteryVolts)
+                            : "—");
+                } else if (batt != null && Session.batteryVolts > 0) {
+                    batt.setText(String.format(java.util.Locale.US, "%.2f V", Session.batteryVolts));
+                }
+                h.postDelayed(this, 1500);
             }
-        }, 1000);
+        }, 1500);
     }
 
     @Override

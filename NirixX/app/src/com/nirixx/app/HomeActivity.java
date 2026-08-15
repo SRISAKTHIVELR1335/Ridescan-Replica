@@ -126,6 +126,13 @@ public class HomeActivity extends BaseActivity {
         LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(-2, -2);
         rlp.setMargins(0, Ui.dp(this, 2), 0, Ui.dp(this, 4));
         content.addView(role, rlp);
+        TextView notif = Ui.tv(this, "⤨  Notifications & updates", 12.5f, NAVY, true);
+        LinearLayout.LayoutParams nlp = new LinearLayout.LayoutParams(-2, -2);
+        nlp.setMargins(0, Ui.dp(this, 2), 0, Ui.dp(this, 6));
+        content.addView(notif, nlp);
+        notif.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { go(NotificationActivity.class); }
+        });
         if (service) {
             content.addView(Ui.tv(this,
                     "Dealer Service flow: connect VCI → auto VIN → Diagnostic Section. "

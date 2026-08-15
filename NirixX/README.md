@@ -32,11 +32,11 @@ extra byte is real, on-screen content)
 |---|---|
 | Package | `com.nirixx.app` |
 | Label / tagline | **NirixX** · "Beyond Diagnostics" |
-| Version | `1.5.0` (versionCode 10) |
+| Version | `1.6.0` (versionCode 11) |
 | SDK window | **minSdk 24 (Android 7.0) → targetSdk 34 (Android 14)** |
 | Signature | own NirixX keystore, **APK Signature Scheme v2 + v3** |
 | Architecture | universal (pure Java, no native libs → all ABIs) |
-| Footprint | **49 activities · 4 services** · 81 Java sources · 121 drawable resources |
+| Footprint | **49 activities · 4 services · 1 provider** · 87 Java sources · 121 drawable resources |
 | Database | **SQLite** (`nirixx.db` v2, offline-first, zero third-party deps) |
 | Dependencies | zero third-party libraries — Android framework only (no AndroidX) |
 | Build | one command: `bash build.sh` (~2 min, hermetic, offline) |
@@ -45,7 +45,47 @@ extra byte is real, on-screen content)
 
 ---
 
-## 2. v1.5.0 — production-real diagnostic stack (current build)
+## 2. v1.6.0 — the honesty pass (current build)
+
+v1.5.0 made the *link layer* real; v1.6.0 hunts down every remaining fabricated value in the
+app and replaces it with a real measurement or an honest "not available" state.
+
+**Screens now driven by the live engine (via `core/diag/DiagOps` — single serial executor,
+every frame traced into the session log):**
+
+- **DTCs** — real `19 02 FF` / `14 FF FF FF`; cards show the ECU's actual codes with library
+  descriptions (or "not in library"), active/stored from the real status byte; clear is
+  confirmed by an automatic re-read. The old `Math.random()` outcome is deleted.
+- **Live Parameter / Data Watcher** — real SAE J1979 polling (`core/uds/Obd`: RPM 0x0C,
+  speed 0x0D, coolant 0x05, intake temp 0x0F, MAP 0x0B, throttle 0x11, module voltage 0x42);
+  rows without a published address render "definition pending" and never move.
+- **IO Control / Routines / Write-DID** — real `2F`, real `31`, real `2E`. Write-DID performs
+  a genuine `27 01` seed fetch and shows it; the key step is gated on the OEM algorithm
+  (dependency #3) exactly as documented. Rows without a published DID/routine id are
+  labelled, not actuated.
+- **Battery Health** — real adapter rail (ATRV) + module voltage (PID 0x42) + public 12 V
+  lead-acid SoC bands; CCA/internal-resistance/ripple explicitly marked "not measurable via CAN".
+- **Flashing (ECU + supplier modules)** — the reference 4-phase UI now runs a REAL transfer:
+  imported binary (SAF) → `10 03` → `31 01 FF00` → `34` → `36 × n` → `37` → `11 01`, with
+  progress from actual blocks and true NRC reporting on refusal. Flash preconditions are
+  measured (rail via ATRV, tablet charge via BatteryManager) instead of a fake video gate.
+- **Firmware / Notifications / App Update / IUPR / VHR** — all fabricated content removed:
+  identity strings read from the adapter (ATI), notifications reflect real device state,
+  release notes describe what actually shipped, VHR tables list only values genuinely
+  sampled in the session ("NM" otherwise), System Monitoring counts real frames.
+- **Service Manual / Live Recording** — real document shelf (import, true sizes, open via
+  the new framework-only `DocsProvider`) and real CSV recorder/replayer.
+- **Registration flow wired** (Login → Register → OTP → New PIN) with the OTP-backend gap
+  stated on-screen; navigation graph fully connected — zero unreachable screens.
+
+**Storage:** DB **v3** adds `tests.addr` (bus addresses: `did:`/`pid:`/`m09:`/`rid:`/`io:` —
+grammar in `core/diag/TestAddr`), `manuals`, `flash_bins`.
+
+**Tests:** 8 JVM suites now (added J1979 decode, addr grammar, battery bands) — all pass.
+
+---
+
+## 2A. v1.5.0 — production-real diagnostic stack
 
 The upgrade from "reference-parity UI with a data layer" to a **real diagnostics client**.
 Full analysis: `ARCHITECTURE.md`; explicit gap ledger: `MISSING_DEPENDENCIES.md`.
@@ -101,7 +141,7 @@ the interface, and the exact action to close it.
 
 ---
 
-## 2A. v1.4.0 — reference-UI parity + real database
+## 2B. v1.4.0 — reference-UI parity + real database
 
 Driven page-by-page by the `Ridescan UI Reference Images/` folder (137 screenshots, two UDS
 session logs, the sample `TVS Ronin … _VHR.pdf` and the DMS communication captures):

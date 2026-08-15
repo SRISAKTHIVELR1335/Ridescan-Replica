@@ -11,8 +11,6 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import com.nirixx.app.db.Db;
-import com.nirixx.app.sim.SimEcu;
-import com.nirixx.app.sim.UdsLog;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -133,9 +131,18 @@ public class VhrActivity extends BaseActivity {
         int shown = 0;
         for (final Db.TestDef t : defs) {
             if (t.vmax == t.vmin) continue;             // identifier-strings skip the table
-            if (shown++ >= 8) break;                    // first block, like the EmS-LIVE DATA page
-            String value = SimEcu.liveValue(t);
-            boolean ok = SimEcu.inRange(t, value);
+            if (shown++ >= 8) break;                    // first block, like the Ems-LIVE DATA page
+            // REAL data only: the last value genuinely sampled this session.
+            String sampled = db.lastSample(Session.sessionKey, t.id);
+            final boolean measured = sampled != null;
+            String value = measured ? sampled : "NM";
+            boolean ok = false;
+            if (measured) {
+                try {
+                    double pv = Double.parseDouble(sampled);
+                    ok = pv >= t.vmin && pv <= t.vmax;
+                } catch (Exception e) { ok = true; }
+            }
             LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.VERTICAL);
             row.setBackgroundColor(0xFFEDF1F7);
@@ -145,20 +152,28 @@ public class VhrActivity extends BaseActivity {
             TextView name = Ui.tv(this, t.name, 13.5f, 0xFF1A2138, true);
             name.setTypeface(null, android.graphics.Typeface.BOLD_ITALIC);
             line.addView(name, new LinearLayout.LayoutParams(0, -2, 1f));
-            TextView val = Ui.tv(this, value, 14f, ok ? 0xFF2E9E43 : 0xFFE53935, true);
+            TextView val = Ui.tv(this, value, 14f,
+                    !measured ? 0xFF9AA6B4 : (ok ? 0xFF2E9E43 : 0xFFE53935), true);
             line.addView(val);
             row.addView(line);
-            row.addView(Ui.tv(this, "Min:  " + trim(t.vmin) + "   Max:  " + trim(t.vmax),
+            row.addView(Ui.tv(this, measured
+                            ? "Min:  " + trim(t.vmin) + "   Max:  " + trim(t.vmax)
+                            : "Not measured this session — open Live Parameter with a VCI connected",
                     12f, 0xFF5A6472, true));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
             lp.setMargins(0, 0, 0, Ui.dp(this, 2));
             table.addView(row, lp);
-            liveRows.add(new String[]{t.name, trim(t.vmin), trim(t.vmax), value, ok ? "PASS" : "FAIL"});
-            Session.vhrData.put("live|" + t.name, value);
+            liveRows.add(new String[]{t.name,
+                    measured ? trim(t.vmin) : "—", measured ? trim(t.vmax) : "—",
+                    value, !measured ? "NOT MEASURED" : (ok ? "PASS" : "FAIL")});
+            if (measured) Session.vhrData.put("live|" + t.name, value);
         }
         host.addView(table);
-        UdsLog.log(this, "TX", Session.ecuTx + " -> 22B0FF");
-        UdsLog.log(this, "RX", Session.ecuRx + " -> 62B0FF…");
+        LinearLayout note = Ui.card(this);
+        note.addView(Ui.tv(this, "NM = not measured. The report lists only values actually read "
+                + "during this session; measure them on the Live Parameter screen (VCI required).",
+                12f, 0xFF5A6472, false));
+        host.addView(note);
         next("NEXT");
     }
 
@@ -190,21 +205,19 @@ public class VhrActivity extends BaseActivity {
                         new LinearLayout.LayoutParams(0, -2, 1f));
                 final TextView okv = Ui.tv(this, "—", 13f, 0xFF9AA3B4, false);
                 row.addView(okv);
-                android.widget.Switch sw = new android.widget.Switch(this);
-                row.addView(sw);
+                // real actuations happen on the IO Control screen (needs a published
+                // DID + live link); here we only surface results recorded this session
+                String recorded = db.lastInput(Session.sessionKey, "io", fe.code + "|" + t.name);
+                if (recorded != null) {
+                    okv.setText(recorded);
+                    okv.setTextColor(0xFF2E9E43);
+                } else {
+                    okv.setText("not run");
+                    okv.setTextColor(0xFF9AA3B4);
+                }
                 LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-1, -2);
                 rp.setMargins(0, Ui.dp(this, 4), 0, 0);
                 card.addView(row, rp);
-                sw.setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {
-                    public void onCheckedChanged(android.widget.CompoundButton b, boolean on) {
-                        Session.vhrData.put("io|" + fe.code + "|" + t.name, "Ok");
-                        db.putInput(Session.sessionKey, "io", fe.code + "|" + t.name, "Ok");
-                        okv.setText("Ok");
-                        okv.setTextColor(0xFF2E9E43);
-                        UdsLog.log(VhrActivity.this, "TX", fe.tx + " -> 2F10" + String.format("%02X", t.sort) + "03");
-                        UdsLog.log(VhrActivity.this, "RX", fe.rx + " -> 6F1003");
-                    }
-                });
             }
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
             lp.setMargins(0, 0, 0, Ui.dp(this, 10));

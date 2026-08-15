@@ -40,16 +40,17 @@ public final class Session {
     public static String selectedEcu = "ENGINE MANAGEMENT SYSTEM (OBDII)";
     public static String selectedEcuCode = "EMS-OBDII";
     public static String selectedEcuShort = "EMS";
-    public static String selectedFlashFile = "K6060799_03_S.mot";
+    public static String selectedFlashFile = "";        // set only from a real flash row/import
     public static String ecuTx = "7E0";
     public static String ecuRx = "7E8";
 
     // ---- diagnostic run state ----
     public static int dtcsCleared = 0;
+    public static boolean dtcScanned = false;           // set true only by a real 19 02 exchange
     public static boolean faultsFound = false;
     public static boolean reportGenerated = false;
     public static String odometer = "—";
-    public static double batteryVolts = 12.51;
+    public static double batteryVolts = -1;             // < 0 = never measured (no fake default)
 
     /** Live VHR collector: kind|key -> value (io results, physical answers, dealer tab…). */
     public static final Map<String, String> vhrData = new LinkedHashMap<String, String>();

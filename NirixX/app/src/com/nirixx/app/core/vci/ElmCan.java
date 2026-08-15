@@ -21,6 +21,12 @@ public final class ElmCan implements CanTransport {
     private String adapterId = "ELM327-compatible";
     public String adapterId() { return adapterId; }
 
+    /** Real link statistics for System Monitoring. */
+    public final java.util.concurrent.atomic.AtomicLong framesSent =
+            new java.util.concurrent.atomic.AtomicLong();
+    public final java.util.concurrent.atomic.AtomicLong framesReceived =
+            new java.util.concurrent.atomic.AtomicLong();
+
     public ElmCan(ByteLink link, int txId, int rxId) {
         this.link = link; this.txId = txId; this.rxId = rxId;
         link.setListener(new ByteLink.Listener() {
@@ -65,6 +71,7 @@ public final class ElmCan implements CanTransport {
         for (int i = 0; i < data.length; i++) sb.append(String.format("%02X", data[i]));
         rxBuf.setLength(0);
         link.write((sb.toString() + "\r").getBytes("US-ASCII"));
+        framesSent.incrementAndGet();
     }
 
     public void setFrameListener(CanTransport.FrameListener l) { this.frames = l; }
@@ -102,6 +109,10 @@ public final class ElmCan implements CanTransport {
 
     private void handleLine(String line) {
         if (line.length() == 0) return;
+        if (capturing) {
+            synchronized (captureLines) { captureLines.add(line.trim()); }
+            return;
+        }
         String up = line.toUpperCase(java.util.Locale.US).replace(" ", "");
         if (up.contains("ELM327")) { adapterId = line.trim(); return; }
         if (up.startsWith("AT") || up.equals("OK")
@@ -121,9 +132,55 @@ public final class ElmCan implements CanTransport {
             byte[] d = new byte[bytes];
             for (int i = 0; i < bytes; i++)
                 d[i] = (byte) Integer.parseInt(up.substring(3 + i * 2, 5 + i * 2), 16);
+            framesReceived.incrementAndGet();
             if (frames != null) frames.onFrame(id, d);
             if (tee != null) tee.onFrame(id, d);
         } catch (Exception ignored) { /* non-hex noise */ }
+    }
+
+    // ------------------------------------------- synchronous AT queries
+    private final java.util.List<String> captureLines = new java.util.ArrayList<String>();
+    private volatile boolean capturing = false;
+
+    /** Send an AT command and collect the raw reply lines for settleMs. */
+    public synchronized String queryAt(String cmd, int settleMs) throws Exception {
+        if (!isOpen()) throw new Exception("VCI link not open");
+        synchronized (captureLines) { captureLines.clear(); }
+        capturing = true;
+        rxBuf.setLength(0);
+        link.write((cmd + "\r").getBytes("US-ASCII"));
+        Thread.sleep(settleMs);
+        capturing = false;
+        StringBuilder sb = new StringBuilder();
+        synchronized (captureLines) {
+            for (int i = 0; i < captureLines.size(); i++) {
+                String t = captureLines.get(i).trim();
+                if (t.length() == 0 || "?".equals(t)) continue;
+                if ("OK".equalsIgnoreCase(t)) continue;
+                if (t.equalsIgnoreCase(cmd)) continue;              // echo (ATE1 adapters)
+                if (sb.length() > 0) sb.append('\n');
+                sb.append(t);
+            }
+        }
+        return sb.toString();
+    }
+
+    /** Adapter-measured supply voltage (ATRV) — the real 12 V rail the VCI sees
+     *  on the diagnostic connector.  Replies look like "12.6V"/"12.6". */
+    public Double readVoltageVolts() {
+        try {
+            String r = queryAt("ATRV", 450);
+            java.util.regex.Matcher m = java.util.regex.Pattern
+                    .compile("(\\d{1,2}(?:\\.\\d{1,2})?)\\s*[vV]?")
+                    .matcher(r);
+            if (m.find()) return Double.valueOf(m.group(1));
+        } catch (Exception ignored) { }
+        return null;
+    }
+
+    /** Adapter identity / firmware string (ATI). */
+    public String adapterInfo() {
+        try { return queryAt("ATI", 300); } catch (Exception e) { return ""; }
     }
 
     /** Expose as an IsoTp.Link. */

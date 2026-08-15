@@ -6,13 +6,18 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import com.nirixx.app.core.diag.DiagOps;
+import com.nirixx.app.core.uds.Nrc;
+import com.nirixx.app.core.uds.Obd;
+import com.nirixx.app.core.uds.UdsClient;
 import com.nirixx.app.db.Db;
-import com.nirixx.app.sim.UdsLog;
 import java.util.List;
 
-/** IUPR Test — Primary page (VIN, CVN, CAL ID, IUPR ratio + History) then the
- *  Secondary page (model, kms, city, state, ambient conditions, sold date),
- *  submitted into the iupr_history table. Mirrors the reference flow. */
+/** IUPR Test — Primary page (VIN, CVN, CAL ID, IUPR section + History) then
+ *  the Secondary page (model details, kms, city, state, ambient conditions),
+ *  submitted into the iupr_history table.  Every ECU-origin value is read
+ *  live (SAE J1979 Mode 09) or honestly marked unread; ratios are not
+ *  published for these ECMs and say so instead of inventing numbers. */
 public class IuprTestActivity extends BaseActivity {
 
     private LinearLayout content;
@@ -21,6 +26,7 @@ public class IuprTestActivity extends BaseActivity {
 
     private EditText edtKms, edtCity, edtState, edtSold;
     private TextView txtModel, boxMap, boxIat;
+    private String cvn = null, calId = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,7 +63,6 @@ public class IuprTestActivity extends BaseActivity {
         hist.setTextColor(0xFFFFFFFF);
         hist.setTypeface(null, android.graphics.Typeface.BOLD);
         hist.setGravity(android.view.Gravity.CENTER);
-        hist.setBackgroundResource(R.drawable.bg_bar_light);
         hist.setPadding(Ui.dp(this, 18), Ui.dp(this, 8), Ui.dp(this, 18), Ui.dp(this, 8));
         hist.setBackgroundColor(0xFF63A6E8);
         head.addView(hist);
@@ -66,13 +71,15 @@ public class IuprTestActivity extends BaseActivity {
         View spacer = new View(this);
         card.addView(spacer, new LinearLayout.LayoutParams(1, Ui.dp(this, 8)));
 
-        card.addView(Ui.kvBox(this, "VIN", Session.selectedVin));
-        card.addView(Ui.kvBox(this, "CVN", "47F2DBD1"));
-        card.addView(Ui.kvBox(this, "CAL ID", "U279EBS6V0A3a903"));
-
-        String ratio = "Primary O2:\nNum : 892\nDen : 41\nRatio : 21.756098\n\n"
-                + "Secondary O2: NA\nCat Monitoring: NA\nEVAP: NA";
-        card.addView(Ui.kvBox(this, "IUPR Ratio", ratio));
+        card.addView(Ui.kvBox(this, "VIN",
+                Session.selectedVin.length() > 0 ? Session.selectedVin : "not identified"));
+        card.addView(Ui.kvBox(this, "CVN",
+                cvn != null ? cvn : (DiagOps.live() ? "reading…" : "not read — no VCI link")));
+        card.addView(Ui.kvBox(this, "CAL ID",
+                calId != null ? calId : (DiagOps.live() ? "reading…" : "not read — no VCI link")));
+        card.addView(Ui.kvBox(this, "IUPR Ratio",
+                "In-use performance ratios are not published for this ECM — pending the OEM "
+                        + "definition pack (see MISSING_DEPENDENCIES.md)."));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
         lp.setMargins(0, 0, 0, Ui.dp(this, 8));
         content.addView(card, lp);
@@ -82,15 +89,31 @@ public class IuprTestActivity extends BaseActivity {
         np.gravity = android.view.Gravity.RIGHT;
         content.addView(next, np);
         next.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                UdsLog.log(IuprTestActivity.this, "TX", Session.ecuTx + " -> 22F8B0");
-                UdsLog.log(IuprTestActivity.this, "RX", Session.ecuRx + " -> 62F8B0…");
-                renderSecondary();
-            }
+            public void onClick(View v) { renderSecondary(); }
         });
 
         hist.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { showHistory(); }
+        });
+
+        if (DiagOps.live()) readIdentifiers();
+    }
+
+    private void readIdentifiers() {
+        DiagOps.mode09(this, 0x06, new DiagOps.Cb<byte[]>() {
+            public void ok(byte[] v) {
+                cvn = UdsClient.hexBytes(v).replace(" ", "");
+                if (!secondary) renderPrimary();
+            }
+            public void err(String w, String d, Nrc n) { cvn = "ECU refused"; if (!secondary) renderPrimary(); }
+        });
+        DiagOps.mode09(this, 0x04, new DiagOps.Cb<byte[]>() {
+            public void ok(byte[] v) {
+                String s = Obd.asciiInfo(v);
+                calId = s == null ? UdsClient.hexBytes(v) : s;
+                if (!secondary) renderPrimary();
+            }
+            public void err(String w, String d, Nrc n) { calId = "ECU refused"; if (!secondary) renderPrimary(); }
         });
     }
 
@@ -112,23 +135,22 @@ public class IuprTestActivity extends BaseActivity {
 
         content.addView(Ui.tv(this, "3. City", 13.5f, 0xFF5A6472, false));
         edtCity = editBox(InputType.TYPE_CLASS_TEXT);
-        edtCity.setText("Chennai");
         content.addView(edtCity);
 
         content.addView(Ui.tv(this, "4. State", 13.5f, 0xFF5A6472, false));
         edtState = editBox(InputType.TYPE_CLASS_TEXT);
-        edtState.setText("Tamil Nadu");
         content.addView(edtState);
 
-        content.addView(Ui.tv(this, "5. Ambient conditions", 13.5f, 0xFF5A6472, false));
-        boxMap = boxLike("91.0 kPa", "MAP");
+        content.addView(Ui.tv(this, "5. Ambient conditions"
+                + (DiagOps.live() ? " (live)" : " — no link, enter manually or leave —"),
+                13.5f, 0xFF5A6472, false));
+        boxMap = boxLike(DiagOps.live() ? "reading…" : "—", "MAP");
         content.addView(boxMap);
-        boxIat = boxLike("55.0 °C", "Intake Air Temperature");
+        boxIat = boxLike(DiagOps.live() ? "reading…" : "—", "Intake Air Temperature");
         content.addView(boxIat);
 
         content.addView(Ui.tv(this, "6. Vehicle sold date (DD/MM/YYYY)", 13.5f, 0xFF5A6472, false));
         edtSold = editBox(InputType.TYPE_CLASS_DATETIME);
-        edtSold.setHint("17/03/2026");
         content.addView(edtSold);
 
         TextView submit = Ui.navyBtn(this, "Submit IUPR Report");
@@ -138,16 +160,31 @@ public class IuprTestActivity extends BaseActivity {
         submit.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 db.saveIupr(Session.sessionKey, Session.vehicleId, Session.selectedVin,
-                        "47F2DBD1", "U279EBS6V0A3a903", "21.756098",
+                        cvn == null ? "unread" : cvn, calId == null ? "unread" : calId,
+                        "pending-definition",
                         edtKms.getText().toString(), edtCity.getText().toString(),
                         edtState.getText().toString());
                 Ui.resultDialog(IuprTestActivity.this, R.drawable.ic_flash_success,
                         "IUPR Submitted",
-                        "IUPR report for " + Session.selectedVehicle + " saved to the NirixX database "
-                                + "and queued for DMS sync.", "Done", new Runnable() {
+                        "IUPR report for " + Session.selectedVehicle + " saved to the NirixX database."
+                                + (DiagOps.live() ? "" : "\n(Recorded without live ECU reads.)"),
+                        "Done", new Runnable() {
                             public void run() { finish(); }
                         }).show();
             }
+        });
+
+        if (DiagOps.live()) readAmbient();
+    }
+
+    private void readAmbient() {
+        DiagOps.obdPid(this, Obd.PID_INTAKE_MAP, new DiagOps.Cb<Double>() {
+            public void ok(Double v) { boxMap.setText(v.intValue() + ".0 kPa     MAP"); }
+            public void err(String w, String d, Nrc n) { boxMap.setText("unavailable     MAP"); }
+        });
+        DiagOps.obdPid(this, Obd.PID_INTAKE_AIR_TEMP, new DiagOps.Cb<Double>() {
+            public void ok(Double v) { boxIat.setText(v.intValue() + ".0 °C     Intake Air Temperature"); }
+            public void err(String w, String d, Nrc n) { boxIat.setText("unavailable     IAT"); }
         });
     }
 
@@ -163,7 +200,6 @@ public class IuprTestActivity extends BaseActivity {
         return e;
     }
 
-    /** Outlined display box: value left, right-aligned suffix (MAP / IAT …). */
     private TextView boxLike(String value, String suffix) {
         TextView t = new TextView(this);
         t.setText(suffix == null ? value : value + "     " + suffix);

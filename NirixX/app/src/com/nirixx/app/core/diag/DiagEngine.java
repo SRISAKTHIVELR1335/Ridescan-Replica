@@ -98,6 +98,7 @@ public final class DiagEngine {
             uds = new UdsClient(tp);
             openSession(r);
             established = true;
+            connectedAt = System.currentTimeMillis();
 
             stage(r, "Reading VIN (service 22, DID F190)");
             r.vin = uds.readVin().toUpperCase(java.util.Locale.US).trim();
@@ -164,6 +165,14 @@ public final class DiagEngine {
     }
 
     public static synchronized UdsClient uds() { return uds; }
+
+    /** Raw adapter handle (AT queries like ATRV) — null when not connected. */
+    public static synchronized ElmCan elm() { return ready() ? can : null; }
+
+    private static long connectedAt = 0;
+
+    /** Wall-clock time the current link went up (0 = never). */
+    public static synchronized long connectedAt() { return ready() ? connectedAt : 0; }
 
     // ---------------------------------------------------------------- helpers
     private static void stage(Result r, String s) {

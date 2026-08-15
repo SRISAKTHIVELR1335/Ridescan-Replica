@@ -341,6 +341,17 @@
                     android:textColor="#FFFFFFFF"
                     android:textSize="15sp"
                     android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/txtRegister"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="12dp"
+                    android:text="New dealership? Register here"
+                    android:textColor="#FF14276F"
+                    android:textSize="12.5sp"
+                    android:textStyle="bold" />
             </LinearLayout>
 
             <TextView

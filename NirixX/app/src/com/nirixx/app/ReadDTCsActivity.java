@@ -2,23 +2,24 @@ package com.nirixx.app;
 
 import android.app.Dialog;
 import android.os.Bundle;
-import android.os.Handler;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import com.nirixx.app.core.diag.DiagOps;
+import com.nirixx.app.core.uds.Nrc;
+import com.nirixx.app.core.uds.UdsClient;
 import com.nirixx.app.db.Db;
-import com.nirixx.app.sim.UdsLog;
-import java.util.List;
 
-/** Diagnostic Trouble Codes (reference): Read / Clear actions over UDS 19 02 /
- *  14 FF FF FF, DTC cards with code + description + status, powering the
- *  "Faults Codes Found / Not Found" tile of the Diagnostic Section page. */
+/** Diagnostic Trouble Codes — REAL reads only:
+ *  READ  → UDS 19 02 FF through the live DiagEngine (records decoded P/C/B/U)
+ *  CLEAR → UDS 14 FF FF FF, then an automatic re-read to prove the effect.
+ *  With no VCI link every action reports the honest failure; nothing is drawn
+ *  out of thin air. */
 public class ReadDTCsActivity extends BaseActivity {
 
     private LinearLayout content;
     private Db db;
-    private boolean hasDtcs;
-    private final Handler h = new Handler();
+    private TextView read, clear;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,19 +30,26 @@ public class ReadDTCsActivity extends BaseActivity {
         db = Db.get(this);
         Session.ensureSession(this);
         content = (LinearLayout) findViewById(R.id.content);
-        hasDtcs = Session.faultsFound;
-        render();
+        render(null);
     }
 
-    private void render() {
+    private void render(UdsClient.DtcRecord[] records) {
         content.removeAllViews();
         content.addView(Ui.crumbs(this, new String[]{"Home", Session.selectedVehicle,
                 Session.selectedEcuCode, "Diagnostic Trouble Codes"}));
 
+        if (!DiagOps.live()) {
+            LinearLayout warn = Ui.card(this);
+            warn.addView(Ui.tv(this, "NO LIVE VCI LINK", 12f, 0xFFB26A00, true));
+            warn.addView(Ui.tv(this, "Connect the NirixiLINK (Login » ADD/PAIR VCI) to read real "
+                    + "trouble codes from " + Session.selectedEcuCode + ".", 12.5f, 0xFF5A6472, false));
+            content.addView(warn);
+        }
+
         LinearLayout act = new LinearLayout(this);
         act.setOrientation(LinearLayout.HORIZONTAL);
-        TextView read = Ui.navyBtn(this, "READ DTC");
-        TextView clear = Ui.navyBtn(this, "CLEAR DTC");
+        read = Ui.navyBtn(this, "READ DTC");
+        clear = Ui.navyBtn(this, "CLEAR DTC");
         LinearLayout.LayoutParams hp = new LinearLayout.LayoutParams(0, -2, 1f);
         hp.setMargins(0, 0, Ui.dp(this, 6), 0);
         LinearLayout.LayoutParams hp2 = new LinearLayout.LayoutParams(0, -2, 1f);
@@ -49,27 +57,31 @@ public class ReadDTCsActivity extends BaseActivity {
         act.addView(read, hp);
         act.addView(clear, hp2);
         LinearLayout.LayoutParams ap = new LinearLayout.LayoutParams(-1, -2);
-        ap.setMargins(0, 0, 0, Ui.dp(this, 10));
+        ap.setMargins(0, Ui.dp(this, 4), 0, Ui.dp(this, 10));
         content.addView(act, ap);
 
-        if (!hasDtcs) {
+        if (records == null) {
+            LinearLayout card = Ui.card(this);
+            card.addView(Ui.tv(this, "No DTC query performed yet.", 13.5f, 0xFF5A6472, false));
+            content.addView(card);
+        } else if (records.length == 0) {
             LinearLayout card = Ui.card(this);
             LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(android.view.Gravity.CENTER_VERTICAL);
             row.addView(Ui.dot(this, true));
-            TextView t = Ui.tv(this, "  No Diagnostic Trouble Codes", 15f, 0xFF2E9E43, true);
-            row.addView(t);
+            row.addView(Ui.tv(this, "  No Diagnostic Trouble Codes", 15f, 0xFF2E9E43, true));
             card.addView(row);
-            card.addView(Ui.tv(this,
-                    "19 02 08 returned 59 02 FF 00 — no stored, pending or confirmed DTCs on "
-                            + Session.selectedEcuCode + ".", 12.5f, 0xFF5A6472, false));
+            card.addView(Ui.tv(this, "19 02 FF returned an empty DTC list from "
+                    + Session.selectedEcuCode + ".", 12.5f, 0xFF5A6472, false));
             content.addView(card);
         } else {
-            List<Db.Dtc> list = db.dtcs(Session.ecuId);
-            String[] status = {"Confirmed", "Pending", "Stored"};
-            for (int i = 0; i < list.size() && i < 4; i++) {
-                Db.Dtc d = list.get(i);
+            for (int i = 0; i < records.length; i++) {
+                UdsClient.DtcRecord rec = records[i];
+                String code = rec.code();
+                String descr = db.dtcDescr(code);
+                if (descr == null) descr = "Description not in the NirixX DTC library";
+
                 LinearLayout card = new LinearLayout(this);
                 card.setOrientation(LinearLayout.HORIZONTAL);
                 card.setBackgroundResource(R.drawable.bg_card);
@@ -81,14 +93,16 @@ public class ReadDTCsActivity extends BaseActivity {
                 LinearLayout mid = new LinearLayout(this);
                 mid.setOrientation(LinearLayout.VERTICAL);
                 mid.setPadding(Ui.dp(this, 12), 0, 0, 0);
-                mid.addView(Ui.tv(this, d.code, 15f, 0xFF1A2138, true));
-                mid.addView(Ui.tv(this, d.descr, 12.5f, 0xFF5A6472, false));
+                mid.addView(Ui.tv(this, code, 15f, 0xFF1A2138, true));
+                mid.addView(Ui.tv(this, descr, 12.5f, 0xFF5A6472, false));
                 card.addView(mid, new LinearLayout.LayoutParams(0, -2, 1f));
-                card.addView(Ui.chip(this, status[i % status.length],
-                        R.drawable.bg_chip_red, 0xFFD32F2F));
+                card.addView(Ui.chip(this, rec.active() ? "Active" : "Stored",
+                        rec.active() ? R.drawable.bg_chip_red : R.drawable.bg_chip,
+                        rec.active() ? 0xFFD32F2F : 0xFF5A6472));
                 LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
                 lp.setMargins(0, 0, 0, Ui.dp(this, 8));
                 content.addView(card, lp);
+                db.putInput(Session.sessionKey, "dtc", code, rec.active() ? "Active" : "Stored");
             }
         }
 
@@ -96,42 +110,53 @@ public class ReadDTCsActivity extends BaseActivity {
             public void onClick(View v) { doRead(); }
         });
         clear.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { doClear(); }
+            public void onClick(View v) {
+                Ui.dialog(ReadDTCsActivity.this, "Clear all DTCs?",
+                        "Sends UDS 14 FF FF FF to " + Session.selectedEcuCode
+                                + ". Freeze-frame data is erased too. Proceed?",
+                        "Clear", new Runnable() { public void run() { doClear(); } },
+                        "Cancel", null).show();
+            }
         });
     }
 
     private void doRead() {
         final Dialog d = Ui.progressDialog(this, "Reading DTCs (19 02 FF)…");
         d.show();
-        UdsLog.log(this, "TX", Session.ecuTx + " -> 1902FF");
-        h.postDelayed(new Runnable() {
-            public void run() {
+        DiagOps.readDtc(this, new DiagOps.Cb<UdsClient.DtcRecord[]>() {
+            public void ok(UdsClient.DtcRecord[] recs) {
                 d.dismiss();
-                hasDtcs = Math.random() < 0.7;
-                Session.faultsFound = hasDtcs;
-                UdsLog.log(ReadDTCsActivity.this, "RX",
-                        Session.ecuRx + " -> " + (hasDtcs ? "5902FF8CD3013501" : "5902FF00"));
-                toast(hasDtcs ? "DTCs detected on " + Session.selectedEcuCode : "No DTCs present");
-                render();
+                Session.faultsFound = recs != null && recs.length > 0;
+                Session.dtcScanned = true;
+                render(recs);
+                toast(recs == null || recs.length == 0
+                        ? "No DTCs present on " + Session.selectedEcuCode
+                        : recs.length + " DTC(s) on " + Session.selectedEcuCode);
             }
-        }, 1200);
+            public void err(String what, String detail, Nrc nrc) {
+                d.dismiss();
+                Ui.resultDialog(ReadDTCsActivity.this, R.drawable.ic_warn,
+                        "Read failed", detail, "OK", null).show();
+            }
+        });
     }
 
     private void doClear() {
         final Dialog d = Ui.progressDialog(this, "Clearing DTCs (14 FF FF FF)…");
         d.show();
-        UdsLog.log(this, "TX", Session.ecuTx + " -> 14FFFFFF");
-        h.postDelayed(new Runnable() {
-            public void run() {
+        DiagOps.clearDtc(this, new DiagOps.Cb<Boolean>() {
+            public void ok(Boolean v) {
                 d.dismiss();
-                hasDtcs = false;
-                Session.faultsFound = false;
                 Session.dtcsCleared++;
-                UdsLog.log(ReadDTCsActivity.this, "RX", Session.ecuRx + " -> 54");
-                Ui.resultDialog(ReadDTCsActivity.this, R.drawable.ic_flash_success,
-                        "DTCs Cleared", "All trouble codes erased from " + Session.selectedEcuCode + ".",
-                        "OK", new Runnable() { public void run() { render(); } }).show();
+                Session.vhrData.put("dtc|cleared", "yes");
+                toast("DTCs cleared — re-reading…");
+                doRead();
             }
-        }, 1100);
+            public void err(String what, String detail, Nrc nrc) {
+                d.dismiss();
+                Ui.resultDialog(ReadDTCsActivity.this, R.drawable.ic_warn,
+                        "Clear failed", detail, "OK", null).show();
+            }
+        });
     }
 }

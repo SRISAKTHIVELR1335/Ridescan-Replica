@@ -1,5 +1,8 @@
+import com.nirixx.app.core.diag.BatteryAssess;
+import com.nirixx.app.core.diag.TestAddr;
 import com.nirixx.app.core.uds.IsoTp;
 import com.nirixx.app.core.uds.Nrc;
+import com.nirixx.app.core.uds.Obd;
 import com.nirixx.app.core.uds.UdsClient;
 import com.nirixx.app.core.vin.VinRules;
 import java.util.ArrayList;
@@ -20,8 +23,62 @@ public final class TestCore {
         testUdsConversationFromLog();
         testNegativeResponse();
         testNrcTable();
+        testObdDecode();
+        testAddrParse();
+        testBatteryBands();
         if (failures > 0) { System.out.println("FAILED: " + failures); System.exit(1); }
         System.out.println("ALL CORE TESTS PASS");
+    }
+
+    // ---------------------------------------------------------- SAE J1979 decode
+    static void testObdDecode() {
+        // RPM: (256A+B)/4 — 0x1A,0xF8 → (0x1AF8)/4 = 1726
+        Double rpm = Obd.decodePid(0x0C, new byte[]{0x41, 0x0C, 0x1A, (byte) 0xF8});
+        bool(rpm != null && Math.abs(rpm - 1726.0) < 0.01, "RPM 41 0C 1A F8 → 1726");
+        // Coolant: A-40 → 0x78 = 120 → 80 °C
+        Double ct = Obd.decodePid(0x05, new byte[]{0x41, 0x05, 0x78});
+        bool(ct != null && ct == 80.0, "coolant 0x78 → 80 C");
+        // Module voltage: (256A+B)/1000 — 0x2E,0x1E → 11806/1000 = 11.806 V
+        Double mv = Obd.decodePid(0x42, new byte[]{0x41, 0x42, 0x2E, 0x1E});
+        bool(mv != null && Math.abs(mv - 11.806) < 0.001, "module volts → 11.806");
+        // TPS: A*100/255 — 0x80 → 50.2%
+        Double tp = Obd.decodePid(0x11, new byte[]{0x41, 0x11, (byte) 0x80});
+        bool(tp != null && Math.abs(tp - 50.196) < 0.01, "TPS 0x80 → 50.2%");
+        // wrong PID echo must be rejected, not mis-decoded
+        bool(Obd.decodePid(0x0C, new byte[]{0x41, 0x05, 0x00}) == null, "mismatched PID rejected");
+        // Mode 09 ASCII record: 49 02 01 <"MD637…">
+        byte[] vinRec = Obd.decodeInfo(0x02, new byte[]{0x49, 0x02, 0x01, 'M', 'D'});
+        bool(vinRec != null && vinRec.length == 2 && "MD".equals(Obd.asciiInfo(vinRec)),
+                "mode09 VIN record decode");
+        ok("OBD-II decode (J1979)");
+    }
+
+    // ---------------------------------------------------------- TestAddr grammar
+    static void testAddrParse() {
+        TestAddr did = TestAddr.parse("did:F190");
+        bool(did != null && did.kind == TestAddr.DID && did.value == 0xF190, "did:F190");
+        TestAddr pid = TestAddr.parse("pid:0B*10");
+        bool(pid != null && pid.kind == TestAddr.PID && pid.value == 0x0B && pid.factor == 10.0,
+                "pid:0B*10 factor");
+        TestAddr m = TestAddr.parse("m09:02");
+        bool(m != null && m.kind == TestAddr.M09 && m.value == 2, "m09:02");
+        TestAddr r = TestAddr.parse("ridge:ff00");
+        bool(r == null, "garbage rejected");
+        bool(TestAddr.parse(null) == null && TestAddr.parse("") == null, "null/empty rejected");
+        ok("TestAddr grammar");
+    }
+
+    // ---------------------------------------------------------- battery bands
+    static void testBatteryBands() {
+        bool(BatteryAssess.socPercent(12.72) == 100, "12.72 V → 100%");
+        bool(BatteryAssess.socPercent(12.45) == 75, "12.45 V → 75%");
+        bool(BatteryAssess.socPercent(12.05) == 25, "12.05 V → 25%");
+        bool(BatteryAssess.socPercent(11.5) == 0, "11.5 V → 0%");
+        bool(BatteryAssess.isCharging(14.2), "14.2 V charging");
+        bool(!BatteryAssess.isCharging(12.4), "12.4 V not charging");
+        bool(BatteryAssess.assessment(12.62).contains("OK"), "12.62 V → OK text");
+        bool(BatteryAssess.assessment(11.9).contains("low"), "11.9 V → low text");
+        ok("Battery assessment bands");
     }
 
     // ---------------------------------------------------------- VIN rules

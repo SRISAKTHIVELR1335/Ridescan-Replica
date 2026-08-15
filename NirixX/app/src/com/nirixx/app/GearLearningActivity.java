@@ -67,16 +67,19 @@ public class GearLearningActivity extends BaseActivity {
     }
 
     private void runLearn() {
-        final Dialog d = Ui.progressDialog(this, "Learning gear positions…");
-        d.show();
-        h.postDelayed(new Runnable() {
-            public void run() {
-                d.dismiss();
-                Ui.resultDialog(GearLearningActivity.this, R.drawable.ic_flash_success,
-                        "Learning Complete", "Gear positions learned and stored. Switch ignition OFF for 30 s.",
-                        "OK", null).show();
-            }
-        }, 3200);
+        // Initiation is a UDS routine (31 01 <rid>) whose id is not published
+        // for these ECMs — instead of pretending, the app says exactly that.
+        if (!com.nirixx.app.core.diag.DiagOps.live()) {
+            Ui.resultDialog(this, R.drawable.ic_warn, "No VCI Link",
+                    "Connect the NirixiLINK to run gear learning on the vehicle.",
+                    "OK", null).show();
+            return;
+        }
+        Ui.resultDialog(this, R.drawable.ic_warn, "Routine ID Pending",
+                "Gear-learning is routine 31 01 <id> — the routine id is not published "
+                        + "for this ECM yet (OEM definition pack required, see "
+                        + "MISSING_DEPENDENCIES.md). No command was sent; the ECU state "
+                        + "is unchanged.", "OK", null).show();
     }
 
     @Override

@@ -11,12 +11,11 @@ public class SystemMonitoringActivity extends BaseActivity {
     private final Handler h = new Handler();
     private boolean running = true;
     private TextView[] vals;
-    private int tx = 4821, rx = 4790, drops = 3;
     private long start = System.currentTimeMillis();
 
     private static final String[] NAMES = {
-        "BT frames TX", "BT frames RX", "Dropped frames", "ISO-TP errors",
-        "Session uptime", "DMS sync status", "VCI signal", "Flash ops today",
+        "CAN frames TX", "CAN frames RX", "Dropped frames", "ISO-TP errors",
+        "Session uptime", "DMS sync status", "VCI signal", "Log lines today",
     };
 
     @Override
@@ -53,16 +52,17 @@ public class SystemMonitoringActivity extends BaseActivity {
     }
 
     private void updateVals() {
-        if (Session.vciConnected) {
-            tx += 2 + new java.util.Random().nextInt(6);
-            rx += 2 + new java.util.Random().nextInt(5);
-        }
-        long secs = (System.currentTimeMillis() - start) / 1000;
+        com.nirixx.app.core.vci.ElmCan can = com.nirixx.app.core.diag.DiagEngine.elm();
+        long tx = can == null ? 0 : can.framesSent.get();
+        long rx = can == null ? 0 : can.framesReceived.get();
+        long up = com.nirixx.app.core.diag.DiagEngine.connectedAt();
+        long secs = up <= 0 ? 0 : (System.currentTimeMillis() - up) / 1000;
         String[] now = {
-            String.valueOf(tx), String.valueOf(rx), String.valueOf(drops), "0",
+            String.valueOf(tx), String.valueOf(rx), "0", "0",
             String.format(java.util.Locale.US, "%02d:%02d:%02d", secs / 3600, (secs / 60) % 60, secs % 60),
-            "TTL expired — queued", Session.vciConnected ? "-52 dBm" : "—",
-            String.valueOf(Session.reportGenerated ? 1 : 0),
+            "not configured (DMS backend pending)",
+            "—",   // RSSI is not exposed by the BT SPP socket API
+            String.valueOf(com.nirixx.app.db.Db.get(this).logsToday()),
         };
         for (int i = 0; i < vals.length; i++) vals[i].setText(now[i]);
     }

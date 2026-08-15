@@ -1,21 +1,16 @@
 package com.nirixx.app;
 
 import android.os.Bundle;
-import android.os.Handler;
 import android.view.View;
-import android.widget.Button;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.TextView;
+import com.nirixx.app.db.Db;
 
-/** In-app self-update: "Downloading File..." → install package flow stub. */
+/** App Update — honest state.  There is no update server in this project (the
+ *  DMS/distribution backend is a documented gap), so instead of a fake
+ *  download bar this page states the installed build, when it was built, and
+ *  how updates are actually delivered. */
 public class UpdateActivity extends BaseActivity {
-    private ProgressBar bar;
-    private TextView state;
-    private Button action;
-    private final Handler h = new Handler();
-    private int pct = 0;
-    private boolean running = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -23,6 +18,7 @@ public class UpdateActivity extends BaseActivity {
         setContentView(R.layout.activity_screen);
         setTitle("App Update");
         wireBack();
+        Db db = Db.get(this);
         LinearLayout content = (LinearLayout) findViewById(R.id.content);
 
         android.widget.ImageView art = new android.widget.ImageView(this);
@@ -34,74 +30,25 @@ public class UpdateActivity extends BaseActivity {
         content.addView(art, ap);
 
         LinearLayout card = Ui.card(this);
-        card.addView(Ui.tv(this, "NirixX 1.3.3", 17f, 0xFF141B2E, true));
-        card.addView(Ui.tv(this, "nirixx.io/updates/nirixx-1.3.0.apk", 12f, 0xFF5A6472, false));
-        state = Ui.tv(this, "Downloading File...", 13.5f, 0xFF0B8376, true);
-        state.setPadding(0, Ui.dp(this, 14), 0, 0);
-        card.addView(state);
-        bar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
-        bar.setMax(100);
-        bar.setProgressDrawable(getResources().getDrawable(R.drawable.progress_thin));
-        LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(-1, Ui.dp(this, 8));
-        bp.setMargins(0, Ui.dp(this, 8), 0, 0);
-        card.addView(bar, bp);
-        TextView pct_ = Ui.tv(this, "0 / 21.4 MB", 11.5f, 0xFF5A6472, false);
-        pct_.setTag("pct");
-        card.addView(pct_);
+        card.addView(Ui.kvRow(this, "Installed", db.config("app_version", "V 1.6.0"), false));
+        card.addView(Ui.kvRow(this, "Update channel", "not configured", false));
+        card.addView(Ui.kvRow(this, "Delivery", "Signed APK from your distributor / Arena build", true));
         content.addView(card);
 
-        action = new Button(this);
-        action.setText("Download & Install");
-        action.setTextColor(0xFFFFFFFF);
-        action.setAllCaps(false);
-        action.setTextSize(15f);
-        action.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        action.setBackgroundResource(R.drawable.bg_button_blue);
-        content.addView(action, new LinearLayout.LayoutParams(-1, Ui.dp(this, 50)));
-        action.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { start(); }
-        });
+        LinearLayout note = Ui.card(this);
+        note.addView(Ui.tv(this,
+                "NirixX never pretends to download an update. Over-the-air app updates require "
+                        + "the distribution backend (see MISSING_DEPENDENCIES.md); until it is "
+                        + "integrated, new builds are handed over as signed APKs.",
+                12.5f, 0xFF5A6472, false));
+        content.addView(note);
 
-        TextView skip = Ui.tv(this, "Skip (5)", 13f, 0xFF5A6472, true);
-        skip.setGravity(android.view.Gravity.CENTER);
-        skip.setPadding(0, Ui.dp(this, 16), 0, 0);
-        content.addView(skip);
-        skip.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                Ui.dialog(UpdateActivity.this, "Skip update?",
-                        "If the update is not required this time, you can skip the upgrade now. But you are only allowed to skip the upgrade 5 times.",
-                        "Skip", new Runnable() { public void run() { finish(); } }, "Cancel", null).show();
-            }
+        TextView notes = Ui.navyBtn(this, "RELEASE NOTES (1.6.0)");
+        LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(-1, Ui.dp(this, 46));
+        np.setMargins(0, Ui.dp(this, 8), 0, 0);
+        content.addView(notes, np);
+        notes.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { go(UpdateDescriptionActivity.class); }
         });
-    }
-
-    private void start() {
-        running = true;
-        action.setEnabled(false);
-        action.setText("Downloading…");
-        h.postDelayed(new Runnable() {
-            public void run() {
-                if (!running) return;
-                pct += 2;
-                bar.setProgress(pct);
-                View card = ((LinearLayout) findViewById(R.id.content)).getChildAt(0);
-                TextView pct_ = (TextView) card.findViewWithTag("pct");
-                if (pct_ != null) pct_.setText(String.format(java.util.Locale.US, "%.1f / 21.4 MB", pct * 0.214f));
-                if (pct < 100) start();
-                else {
-                    running = false;
-                    state.setText("Download complete");
-                    action.setText("Install");
-                    action.setEnabled(true);
-                    action.setOnClickListener(new View.OnClickListener() {
-                        public void onClick(View v) {
-                            Ui.resultDialog(UpdateActivity.this, R.drawable.ic_flash_success,
-                                    "Ready to Install", "Package verified.\nThe system installer takes over on a real deployment.",
-                                    "OK", null).show();
-                        }
-                    });
-                }
-            }
-        }, 90);
     }
 }

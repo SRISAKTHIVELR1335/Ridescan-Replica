@@ -38,9 +38,8 @@ public class RegisterActivity extends BaseActivity {
         content.addView(reg, new LinearLayout.LayoutParams(-1, Ui.dp(this, 50)));
         reg.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                Ui.resultDialog(RegisterActivity.this, R.drawable.ic_flash_success,
-                        "Application Submitted", "You will receive an activation email after verification.",
-                        "OK", new Runnable() { public void run() { finish(); } }).show();
+                // real flow continues: e-mail verification (OTP) → PIN setup
+                go(OtpActivity.class);
             }
         });
     }

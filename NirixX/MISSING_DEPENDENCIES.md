@@ -6,6 +6,8 @@ posed as reality.
 
 | # | Dependency | Why required | Where used | What's already implemented | What remains | Exact action required |
 |---|---|---|---|---|---|---|
+
+**Closed since this table was first written (v1.6.0):** 12 V battery measurement is now real (ELM327 ATRV rail + SAE J1979 PID 0x42, public SoC chart — see `core/diag/BatteryAssess`). Flash binaries no longer need to ship — the operator imports the real image from storage and the true 34/36/37 pipeline runs (ECU refusals reported with their NRC). Service manuals are a real document shelf (SAF import + content-provider open). The rows below remain open.
 | 1 | **Kvaser Android SDK (Canlib for Android / Kvaser Android drivers)** | Kvaser uses a proprietary binary framing, not ELM ASCII | `core/vci/` transport family | ByteLink/CanTransport interfaces; BT/WiFi/USB-CDC ELM327 transports (real) | No Kvaser channel impl — intentionally absent | Obtain Kvaser's official Android SDK/jar from Kvaser AB; drop `KvaserCan implements CanTransport` beside `ElmCan` |
 | 2 | **TechPro VCI protocol spec/SDK** | Same — vendor protocol | same | same | same | Obtain TechPro protocol docs/SDK from the supplier |
 | 3 | **OEM Security-Access seed-key algorithm (0x27)** | Write-DID & programming need the real key derivation | `core/uds/UdsClient.securitySeed/Key` | Full 0x27 request/response sequencing, attempt-counter/lockout NRC handling (0x35/0x36/0x37) | The algorithm itself (OEM secret — must never be reverse-engineered into the repo) | OEM-authorized key calculator (document/signed library) injected via a `SeedKeyProvider` interface |

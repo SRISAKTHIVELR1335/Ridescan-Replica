@@ -1,4 +1,4 @@
-# NirixX — Architecture Map (v1.5.0)
+# NirixX — Architecture Map (v1.6.0)
 
 ## 1. Audit verdict (what was found on inspection)
 
@@ -22,23 +22,33 @@
 com.nirixx.app
 ├── core/
 │   ├── uds/   IsoTp (SF/FF/CF/FC, BS, STmin, timeouts)      [pure Java]
-│   │          UdsClient (0x10/0x11/0x14/0x19/0x22/0x27/0x28/0x2E/0x31/
+│   │          UdsClient (0x10/0x11/0x14/0x19/0x22/0x23/0x27/0x28/0x2E/0x2F/0x31/
 │   │                    0x34/0x36/0x37/0x3E/0x85, NRC 0x78 wait-out)    [pure Java]
 │   │          Nrc (ISO 14229 code → technician text)        [pure Java]
+│   │          Obd (SAE J1979 Mode 01/09 PIDs + formulas)    [pure Java]
 │   ├── vin/   VinRules (validity, prefix rules, systems)    [pure Java]
 │   ├── vci/   CanTransport · ByteLink (interfaces)
-│   │          ElmCan  (ELM327 dialect: ATZ/E0/L0/H1/SP6/SH/CRA)
+│   │          ElmCan  (ELM327 dialect: ATZ/E0/L0/H1/SP6/SH/CRA + ATRV/ATI
+│   │                  sync queries + frame counters)
 │   │          BtLink  (RFCOMM SPP 00001101)
 │   │          WifiLink(TCP 192.168.0.10:35000, configurable)
 │   │          UsbLink (android.hardware.usb host, CDC-ACM claim, bulk EPs)
 │   ├── diag/  DiagEngine (owning chain, bring-up, results)
+│   │          DiagOps (single-executor ops surface: DTC/io/routine/DID/
+│   │                  PID/Mode09/ATRV, real-traced, NRC-mapped)
+│   │          FlashRunner (real 34/36/37 transfer engine)
+│   │          TestAddr (tests.addr grammar)                 [pure Java]
+│   │          BatteryAssess (12 V SoC bands)                [pure Java]
 │   │          TransportSettings (configs persistence)
 │   └── role/  Roles (RBAC modules, screen map, role checks)
-├── db/        Db — SQLite v2: 33 supplied vehicles + VIN rules, ECU
-│              applicability from variant strings, users/roles/sessions/
-│              logs/streams/inputs/iupr/vhr/configs
+├── db/        Db — SQLite v3: 33 supplied vehicles + VIN rules, ECU
+│              applicability from variant strings, tests.addr bus addresses,
+│              users/roles/sessions/logs/streams/inputs/iupr/vhr/configs +
+│              manuals/flash_bins (real imports)
 ├── sim/       SimEcu + UdsLog — TRAINING link only (clearly labelled;
 │              never presented as a live link)
+├── DocsProvider — framework-only content provider (imported manuals,
+│              binaries, reports opened by external viewers)
 └── *Activity  reference-styled screens (Ui kit + BaseActivity shell)
 ```
 
