@@ -290,6 +290,29 @@ public final class Ui {
     }
 
     /** Big navy primary button. */
+    /** Bottom red validation banner (the reference tool shows its blocking
+     *  field-messages like "Please fill & upload picture of all the fields"
+     *  this way).  Auto-dismisses; framework-only (no design lib). */
+    public static void errorBar(final Activity a, String msg) {
+        final android.view.ViewGroup root =
+                (android.view.ViewGroup) a.findViewById(android.R.id.content);
+        final TextView bar = tv(a, "✕  " + msg, 13.5f, 0xFFFFFFFF, true);
+        bar.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        bar.setPadding(dp(a, 14), dp(a, 10), dp(a, 14), dp(a, 10));
+        bar.setBackgroundDrawable(roundRect(0xFFDE3B40, 8f, a));
+        FrameLayout.LayoutParams fp = new FrameLayout.LayoutParams(-1, -2);
+        fp.gravity = android.view.Gravity.BOTTOM;
+        fp.setMargins(dp(a, 12), 0, dp(a, 12), dp(a, 88));
+        View overlay = new FrameLayout(a);
+        overlay.setClickable(false);
+        ((FrameLayout) overlay).addView(bar, fp);
+        android.view.ViewGroup decor = (android.view.ViewGroup) root.getChildAt(0);
+        decor.addView(overlay, new android.view.ViewGroup.LayoutParams(-1, -1));
+        bar.postDelayed(new Runnable() {
+            public void run() { decor.removeView(overlay); }
+        }, 2600);
+    }
+
     public static TextView navyBtn(Context c, String text) {
         TextView b = tv(c, text, 15f, 0xFFFFFFFF, true);
         b.setGravity(Gravity.CENTER);

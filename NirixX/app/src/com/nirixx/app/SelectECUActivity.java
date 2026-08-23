@@ -159,6 +159,9 @@ public class SelectECUActivity extends BaseActivity {
     private void openEcu(Db.Ecu e) {
         Session.selectEcu(e.id, e.name, e.code, e.tx, e.rx);
         Session.selectedFlashFile = db.flashFile(e.id);
+        // re-point the live link at this ECU's CAN ids (reference per-ECU addressing)
+        com.nirixx.app.core.diag.DiagOps.retuneToSessionEcu(this);
+        com.nirixx.app.core.diag.DiagOps.startKeepAlive(this);
         go(ECUDiagnosisActivity.class);
     }
 

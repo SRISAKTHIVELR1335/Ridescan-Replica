@@ -31,6 +31,7 @@ public class HomeActivity extends BaseActivity {
         {"VCI\nFirmware", Integer.valueOf(R.drawable.firmwarecloud), VciFirmwareListActivity.class, "vci_fw"},
         {"Vehicle\nList", Integer.valueOf(R.drawable.motorcycle), VehicleListActivity.class, "vehicles"},
         {"Service\nManual", Integer.valueOf(R.drawable.dtclibrary), ServiceManualActivity.class, "service_manual"},
+        {"Intro\nVideos", Integer.valueOf(R.drawable.ic_play), IntroVideosActivity.class, "videos"},
         {"Log\nViewer", Integer.valueOf(R.drawable.dtc_blue), LogViewerActivity.class, "logs"},
         {"AI\nAssistant", Integer.valueOf(R.drawable.ic_chat), SupportChatActivity.class, "ai_assistant"},
         {"System\nCheck", Integer.valueOf(R.drawable.setting_1), SystemCheckActivity.class, "system_check"},

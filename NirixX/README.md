@@ -38,11 +38,11 @@ extra byte is real, on-screen content)
 |---|---|
 | Package | `com.nirixx.app` |
 | Label / tagline | **NirixX** · "Beyond Diagnostics" |
-| Version | `1.6.1` (versionCode 12) |
+| Version | `1.6.2` (versionCode 13) |
 | SDK window | **minSdk 24 (Android 7.0) → targetSdk 34 (Android 14)** |
 | Signature | own NirixX keystore, **APK Signature Scheme v2 + v3** |
 | Architecture | universal (pure Java, no native libs → all ABIs) |
-| Footprint | **49 activities · 4 services · 1 provider** · 87 Java sources · 121 drawable resources |
+| Footprint | **50 activities · 3 services · 1 provider** · 87 Java sources · 120 drawable resources |
 | Database | **SQLite** (`nirixx.db` v2, offline-first, zero third-party deps) |
 | Dependencies | zero third-party libraries — Android framework only (no AndroidX) |
 | Build | one command: `bash build.sh` (~2 min, hermetic, offline) |

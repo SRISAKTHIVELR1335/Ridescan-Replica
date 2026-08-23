@@ -29,7 +29,7 @@ public class AccountActivity extends BaseActivity {
 
         content.addView(Ui.sectionBar(this, "APPLICATION & SESSION", null));
         LinearLayout app = Ui.card(this);
-        app.addView(Ui.kvRow(this, "App Version", "1.6.1 (build 12)", false));
+        app.addView(Ui.kvRow(this, "App Version", "1.6.2 (build 13)", false));
         app.addView(Ui.kvRow(this, "Signed in as", Session.userType, false));
         app.addView(Ui.kvRow(this, "Session ID", Session.sessionKey == null ? "—" : Session.sessionKey, false));
         app.addView(Ui.kvRow(this, "Connectivity", Session.connectivity, false));
@@ -57,24 +57,27 @@ public class AccountActivity extends BaseActivity {
         }
 
         final TextView rec = Ui.navyBtn(this, ScreenRecordOverlayService.recording
-                ? "Stop Session Recording" : "Start Session Recording");
+                ? "Stop Session Capture" : "Start Session Capture");
         rec.setBackgroundResource(R.drawable.bg_box_outline);
         rec.setTextColor(0xFF14276F);
         LinearLayout.LayoutParams recp = new LinearLayout.LayoutParams(-1, Ui.dp(this, 48));
         recp.setMargins(0, Ui.dp(this, 12), 0, 0);
         content.addView(rec, recp);
+        content.addView(Ui.tv(this, "Capture indicator marks this diagnostic session's active "
+                + "window in the log. On-screen video recording (MediaProjection) is tracked in "
+                + "MISSING_DEPENDENCIES.md and is not claimed.", 11.5f, 0xFF9AA3B4, false));
         rec.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 android.content.Intent it = new android.content.Intent(AccountActivity.this, ScreenRecordOverlayService.class);
                 if (!ScreenRecordOverlayService.recording) {
                     startService(it);
-                    rec.setText("Stop Session Recording");
-                    toast("Screen recording started (overlay service)");
+                    rec.setText("Stop Session Capture");
+                    toast("Session capture indicator ON (timeline marker only)");
                 } else {
                     it.setAction("stop");
                     startService(it);
-                    rec.setText("Start Session Recording");
-                    toast("Recording stopped — session stored");
+                    rec.setText("Start Session Capture");
+                    toast("Session capture indicator OFF");
                 }
             }
         });

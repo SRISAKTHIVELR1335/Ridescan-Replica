@@ -43,13 +43,26 @@ public final class TransportSettings {
         if (displayName != null && displayName.length() > 0) {
             Db.get(c).setConfig("last_vci", displayName);
         }
-        // derive a stable 6-digit serial for the session-id scheme:
-        // last 6 hex digits of the BT MAC when we have it, else keep stored.
+        // derive a stable 6-digit serial for the session-id scheme
+        // (<vciSerial><ddMMyyyy><HHmmss> — see docs/analysis/16):
+        // 1) trailing digits of the adapter's own display name (TechPRO_504856 → 504856);
+        // 2) deterministic 6-digit hash of this tablet's build fingerprint.
+        //    (Never a captured third-party serial.)
         String serial = Db.get(c).config("vci_serial", "");
         if (serial.length() == 0) {
-            serial = "504856";
+            serial = deriveSerial(displayName);
             Db.get(c).setConfig("vci_serial", serial);
         }
         Session.vciSerial = serial;
+    }
+
+    private static String deriveSerial(String displayName) {
+        if (displayName != null) {
+            String d = displayName.replaceAll("[^0-9]", "");
+            if (d.length() >= 6) return d.substring(d.length() - 6);
+        }
+        int h = (android.os.Build.BRAND + "|" + android.os.Build.MODEL + "|"
+                + android.os.Build.FINGERPRINT).hashCode();
+        return String.format(java.util.Locale.US, "%06d", (Math.abs(h) % 900000) + 100000);
     }
 }

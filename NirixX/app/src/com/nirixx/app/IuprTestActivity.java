@@ -26,7 +26,7 @@ public class IuprTestActivity extends BaseActivity {
 
     private EditText edtKms, edtCity, edtState, edtSold;
     private TextView txtModel, boxMap, boxIat;
-    private String cvn = null, calId = null;
+    private String cvn = null, calId = null, ipt = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,9 +77,12 @@ public class IuprTestActivity extends BaseActivity {
                 cvn != null ? cvn : (DiagOps.live() ? "reading…" : "not read — no VCI link")));
         card.addView(Ui.kvBox(this, "CAL ID",
                 calId != null ? calId : (DiagOps.live() ? "reading…" : "not read — no VCI link")));
-        card.addView(Ui.kvBox(this, "IUPR Ratio",
-                "In-use performance ratios are not published for this ECM — pending the OEM "
-                        + "definition pack (see MISSING_DEPENDENCIES.md)."));
+        card.addView(Ui.kvBox(this, "IUPR (Mode 09 $08 IPT)",
+                ipt != null ? ipt : (DiagOps.live() ? "reading…" : "not read — no VCI link")));
+        card.addView(Ui.kvBox(this, "Monitor names",
+                "IPT numerator/denominator pairs are shown in bus order; the per-monitor "
+                        + "identity map is OEM-published material — pending the definition pack "
+                        + "(see MISSING_DEPENDENCIES.md)."));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
         lp.setMargins(0, 0, 0, Ui.dp(this, 8));
         content.addView(card, lp);
@@ -114,6 +117,16 @@ public class IuprTestActivity extends BaseActivity {
                 if (!secondary) renderPrimary();
             }
             public void err(String w, String d, Nrc n) { calId = "ECU refused"; if (!secondary) renderPrimary(); }
+        });
+        DiagOps.mode09(this, 0x08, new DiagOps.Cb<byte[]>() {
+            public void ok(byte[] v) {
+                String s = Obd.decodeIpt(v);
+                ipt = s == null ? UdsClient.hexBytes(v).replace(" ", "") : s;
+                if (!secondary) renderPrimary();
+            }
+            public void err(String w, String d, Nrc n) {
+                ipt = "ECU refused (IPT not supported)"; if (!secondary) renderPrimary();
+            }
         });
     }
 

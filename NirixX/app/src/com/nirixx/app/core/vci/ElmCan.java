@@ -13,7 +13,7 @@ import com.nirixx.app.core.uds.IsoTp;
 public final class ElmCan implements CanTransport {
 
     private final ByteLink link;
-    private final int txId, rxId;
+    private int txId, rxId;          // mutable: re-pointed on ECU switch / functional lane
     private final StringBuilder rxBuf = new StringBuilder();
     private CanTransport.FrameListener frames;
     private CanTransport.ErrorListener errors;
@@ -51,6 +51,25 @@ public final class ElmCan implements CanTransport {
         at("ATCRA" + Integer.toHexString(rxId).toUpperCase(), 150);
         open = true;
     }
+
+    /** Re-point the 11-bit CAN header pair at runtime (ATSH/ATCRA are cheap and
+     *  idempotent on ELM327-class adapters). Used when the technician switches
+     *  the selected ECU (EMS 7E0 / ABS 7E1 / cluster 7F0 …) and when OBD-II
+     *  mode 01/09 queries must go out on the 7DF functional lane — exactly the
+     *  addressing discipline seen in the reference application's bus logs.
+     *  Safe when closed: the new ids just take effect at the next open(). */
+    public synchronized void setAddress(int tx, int rx) throws Exception {
+        if (tx == txId && rx == rxId) return;
+        if (open) {
+            at("ATSH" + Integer.toHexString(tx).toUpperCase(), 60);
+            at("ATCRA" + Integer.toHexString(rx).toUpperCase(), 60);
+        }
+        txId = tx;
+        rxId = rx;
+    }
+
+    public synchronized int txId() { return txId; }
+    public synchronized int rxId() { return rxId; }
 
     private void at(String cmd, int settleMs) throws Exception {
         rxBuf.setLength(0);

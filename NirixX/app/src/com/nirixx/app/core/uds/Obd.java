@@ -70,6 +70,25 @@ public final class Obd {
         return s.length() == 0 ? null : s;
     }
 
+    /** SAE J1979 Mode 09 $08 — In-use Performance Tracking (IUPR) records.
+     *  Layout: [NODI] then per monitor 4 bytes = numerator(2B) | denominator(2B).
+     *  Monitor identity order is OEM-published material, so records here are
+     *  labelled M1..Mn in bus order — never named or judged from guesses. */
+    public static String decodeIpt(byte[] rec) {
+        if (rec == null) return null;
+        int off = (rec.length % 4 == 0) ? 0 : ((rec.length - 1) % 4 == 0 ? 1 : -1);
+        if (off < 0) return null;
+        StringBuilder sb = new StringBuilder();
+        int m = 1;
+        for (int i = off; i + 4 <= rec.length; i += 4) {
+            int num = ((rec[i] & 0xFF) << 8) | (rec[i + 1] & 0xFF);
+            int den = ((rec[i + 2] & 0xFF) << 8) | (rec[i + 3] & 0xFF);
+            if (sb.length() > 0) sb.append("  ·  ");
+            sb.append('M').append(m++).append(' ').append(num).append('/').append(den);
+        }
+        return sb.length() == 0 ? null : sb.toString();
+    }
+
     /** A PID the UI is allowed to poll continuously (cheap, safe reads). */
     public static boolean pollable(int pid) {
         switch (pid) {

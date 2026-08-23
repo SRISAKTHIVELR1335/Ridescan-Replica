@@ -43,6 +43,12 @@ public class ECUDiagnosisActivity extends BaseActivity {
         top.addView(iv, new LinearLayout.LayoutParams(0, Ui.dp(this, 110), 1.1f));
         LinearLayout tiles = new LinearLayout(this);
         tiles.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams m0 = new LinearLayout.LayoutParams(-1, -2);
+        m0.setMargins(0, 0, 0, Ui.dp(this, 8));
+        tiles.addView(Ui.statTile(this, R.drawable.ic_dtc_tri, "Faults Codes",
+                Session.dtcScanned
+                        ? (Session.faultsFound ? "Found !" : "None in last scan")
+                        : "—"), m0);
         LinearLayout b = Ui.statTile(this, R.drawable.ic_battery_sm, "Battery Voltage",
                 Session.batteryVolts > 0
                         ? String.format(java.util.Locale.US, "%.2f V", Session.batteryVolts)
@@ -52,7 +58,7 @@ public class ECUDiagnosisActivity extends BaseActivity {
         m.setMargins(0, 0, 0, Ui.dp(this, 8));
         tiles.addView(b, new LinearLayout.LayoutParams(m));
         LinearLayout upd = Ui.statTile(this, R.drawable.ic_refresh, "App Version",
-                "Installed " + com.nirixx.app.db.Db.get(this).config("app_version", "V 1.6.1"));
+                "Installed " + com.nirixx.app.db.Db.get(this).config("app_version", "V 1.6.2"));
         tiles.addView(upd, new LinearLayout.LayoutParams(m));
         top.addView(tiles, new LinearLayout.LayoutParams(0, -2, 1f));
         content.addView(top);

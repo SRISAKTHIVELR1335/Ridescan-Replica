@@ -219,7 +219,7 @@ public final class Db extends SQLiteOpenHelper {
         // ---- configs -------------------------------------------------------
         setConfig(db, "support_number", "+917969478770");
         backfillAddrs(db);
-        setConfig(db, "app_version", "V 1.6.1");
+        setConfig(db, "app_version", "V 1.6.2");
         setConfig(db, "connectivity", "BLUETOOTH");
         setConfig(db, "last_vci", "NirixiLINK_504856");
         setConfig(db, "dms_domain", "DMS");

@@ -49,6 +49,7 @@ explicitly.
 | 18 | [NirixX Implementation Matrix](18_implementation_matrix.md) | §27 (+§28–§30 pointers) |
 | 19 | [Test Strategy](19_test_strategy.md) | §31 |
 | 20 | [Evidence Register](20_evidence_register.md) | §26 — claim → evidence mapping |
+| 21 | [Alignment Audit v1.6.2](21_alignment_audit.md) | Code-level parity check vs reference + fixes shipped in build 13 |
 
 Related standing docs: [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md) (NirixX architecture,
 §28), [`../../MISSING_DEPENDENCIES.md`](../../MISSING_DEPENDENCIES.md) (missing inputs),

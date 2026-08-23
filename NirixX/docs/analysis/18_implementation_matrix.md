@@ -19,6 +19,7 @@ NirixX = v1.6.1 (build 12). Reference versions analyzed: 2.2.5(190)/2.3.0.
 | 11 | ECU discovery + per-ECU grid gating | [IMG 105128019][LOG 19/3E/22 NRCs] | SelectECU + per-ECU function map | ✅ | — |
 | 12 | Live parameters (sequential 22xx) | [LOG] | LiveParameterActivity poll engine | ✅ | — |
 | 13 | Param decode (names/units/scale, ~100 DIDs) | [LOG payloads][PDF units] | partial table; "definition pending" rows | ◐📦 | OEM DID definition pack |
+| 13b | Per-ECU CAN re-address on select; OBD-II on 7DF functional; 3E 00 keep-alive @~3 s | [LOG both] | ElmCan.setAddress + DiagEngine.readdress + tracedFunctional + keep-alive ticker | ✅ (v1.6.2) | — |
 | 14 | DataWatcher + Live Data Recording CSV | [SRC] | DataWatcher + LiveDataRecording (CSV) | ✅ | — |
 | 15 | ReadDTCs 19 02 FF + RCRP + status histogram + All/Active/History | [LOG][IMG] | ReadDTCs w/ real parse + filter | ✅ | — |
 | 16 | ClearDTC 14 FF FF FF + auto-rescan | [LOG2] | implemented | ✅ | — |
@@ -42,10 +43,10 @@ NirixX = v1.6.1 (build 12). Reference versions analyzed: 2.2.5(190)/2.3.0.
 | 34 | VIN-based flashing | [SRC] | VinFlashingActivity | ✅ (flow) | same deps as 33 |
 | 35 | VIN-based diagnostics | [SRC][LOG] | VINBasedDiagnosis | ✅ | — |
 | 36 | Service manual shelf | [SRC] | ServiceManualActivity (real import/shelf) | ✅ | content packs |
-| 37 | Intro videos (ExoPlayer) | [SRC strings] | VideoActivity | ✅ | — |
+| 37 | Intro videos (ExoPlayer) | [SRC strings] | IntroVideosActivity (own SAF-imported shelf + framework playback) | ✅ (v1.6.2) | — |
 | 38 | AI chatbot | [SRC "RIDE Scan Chatbot!"] | AiAssistantActivity (local rule engine) | ◐🌐 | backend LLM/rules service |
 | 39 | Logs: file per session, viewer, upload | [LOG][SRC LogViewer/FileViewer] | session logs + logging infra + viewer | ◐🌐 | DMS upload |
-| 40 | Screen recording bubble (HBRecorder) | [VIDEO][SRC] | framework MediaProjection recording | ✅ | — |
+| 40 | Screen recording bubble (HBRecorder) | [VIDEO][SRC] | honest session-capture **indicator** only (no video recorded); real MediaProjection pipeline pending | ◐ 🎨 | consent flow + VirtualDisplay/MediaRecorder (v1.6.2 copy explicitly says no video is recorded) |
 | 41 | System monitoring | [SRC] | SystemMonitoringActivity (real telemetry) | ✅ | — |
 | 42 | Notifications (bell+list) | [SRC][IMG] | NotificationActivity (real state rows) | ◐🌐 | push channel |
 | 43 | App update screens | [SRC Update*] | Update/UpdateDescription (honest states) | ◐🌐 | update server |

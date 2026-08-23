@@ -169,6 +169,26 @@ public final class DiagEngine {
     /** Raw adapter handle (AT queries like ATRV) — null when not connected. */
     public static synchronized ElmCan elm() { return ready() ? can : null; }
 
+    /** Current 11-bit CAN address pair the stack is pointed at. */
+    public static synchronized int[] address() { return new int[]{txId, rxId}; }
+
+    /** Re-point the live link at another ECU address (or the 7DF functional
+     *  lane).  Rebuilds ISO-TP + UDS over the same physical link — matches the
+     *  reference tool, which keeps one VCI session and walks ECU addresses
+     *  (EMS 7E0/7E8 · ABS 7E1/7E9 · cluster 7F0/7F1 …) on a single connect.
+     *  Must run on the DiagOps executor (never concurrently with a bus op). */
+    public static synchronized void readdress(int tx, int rx) {
+        if (link == null || can == null) { txId = tx; rxId = rx; return; }
+        try {
+            can.setAddress(tx, rx);
+            if (established) {
+                tp = new IsoTp(can.asLink(), tx, rx);
+                uds = new UdsClient(tp);
+            }
+            txId = tx; rxId = rx;
+        } catch (Exception ignored) { }
+    }
+
     private static long connectedAt = 0;
 
     /** Wall-clock time the current link went up (0 = never). */
@@ -208,6 +228,9 @@ public final class DiagEngine {
                     if (!es.isEmpty()) {
                         Db.Ecu e = es.get(0);
                         Session.selectEcu(e.id, e.name, e.code, e.tx, e.rx);
+                        try {
+                            readdress(Integer.parseInt(e.tx, 16), Integer.parseInt(e.rx, 16));
+                        } catch (Exception ignored) { }
                     }
                 }
             } catch (Exception ignored) { }

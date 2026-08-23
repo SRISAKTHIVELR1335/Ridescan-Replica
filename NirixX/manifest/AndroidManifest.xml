@@ -2,8 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="com.nirixx.app"
-    android:versionCode="12"
-    android:versionName="1.6.1">
+    android:versionCode="13"
+    android:versionName="1.6.2">
 
         <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
@@ -92,6 +92,7 @@
         <activity android:name=".PhysicalEvaluationActivity" />
         <activity android:name=".DealerInformationActivity" />
         <activity android:name=".DataWatcherActivity" />
+        <activity android:name=".IntroVideosActivity" />
 
         <service android:name=".ClientService" android:foregroundServiceType="dataSync" android:exported="false" />
         <service android:name=".ScreenRecordOverlayService" android:exported="false" />

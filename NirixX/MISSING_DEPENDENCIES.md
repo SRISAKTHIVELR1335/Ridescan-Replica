@@ -18,6 +18,7 @@ posed as reality.
 | 8 | **Per-model artwork pack** | Correct photo per model | vehicle cards | NirixX-generated artwork for Ronin/Apache/Jupiter/XL + type-matched generic art; mapping is data-driven by model | No photos claimed as real vehicles | Licensed studio/press photos mapped in `vehicles.image_res` |
 | 9 | **Camera capture without AndroidX** | Physical-evaluation photos via camera intent need a FileProvider on modern Android | `VhrActivity` physical tab | Gallery/SAF upload is real and fully working today | Camera in-app capture | Add a small framework-only Camera2 capture screen OR adopt androidx.core FileProvider — decide policy |
 | 10 | **AI assistant backend** | Free-form answers beyond built-in knowledge base | `SupportChatActivity` (offline expert KB is real) | Deterministic offline Q&A over flashing/DTC/VCI/reports/IUPR/VIN topics | No LLM endpoint | Endpoint + key from platform team; offline KB stays as fallback |
+| 11 | **On-screen video recording (MediaProjection pipeline)** | Reference app records the screen (HBRecorder bubble) | `ScreenRecordOverlayService`, Account screen toggle | Honest session-capture **indicator** that marks the session window; UI states plainly that no video is recorded | No fake "recording" claim | Consent-flow UX on API 34 + VirtualDisplay/MediaRecorder writer + FGS `mediaProjection` type — implement when prioritized (pure framework, no dependency to procure) |
 
 **Honesty guarantees in the build:**
 

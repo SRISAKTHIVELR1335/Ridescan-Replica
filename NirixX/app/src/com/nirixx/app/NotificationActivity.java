@@ -22,7 +22,7 @@ public class NotificationActivity extends BaseActivity {
         content.addView(Ui.section(this, "STATUS"));
 
         add(content, "Installed build",
-                "NirixX " + db.config("app_version", "V 1.6.1")
+                "NirixX " + db.config("app_version", "V 1.6.2")
                         + "  ·  dealer " + Session.dealerCode + " (" + Session.userType + ")",
                 "now", false);
         add(content, "VCI",

@@ -55,6 +55,8 @@ public final class DiagOps {
                     fail(what, "No response from the ECU (bus timeout). Check ignition and wiring.", null, cb);
                 } catch (Exception e) {
                     fail(what, e.getMessage() == null ? String.valueOf(e) : e.getMessage(), null, cb);
+                } finally {
+                    poke();
                 }
             }
             private void fail(final String w, final String d, final Nrc n, final Cb<T> c2) {
@@ -79,6 +81,81 @@ public final class DiagOps {
         UdsEngineHolder h = new UdsEngineHolder();
         h.uds = DiagEngine.uds();
         return h;
+    }
+
+    // -------------------------------------------------- functional OBD-II lane
+    /** Reference-addressing discipline: SAE J1979 mode 01/09 traffic goes out
+     *  on 7DF (functional broadcast); answers arrive on the ECU's response id.
+     *  Re-points the ELM header to 7DF/7E8 for one exchange, then restores the
+     *  selected ECU's physical lane — exactly what the captured bus logs show. */
+    private static byte[] tracedFunctional(Context ctx, byte[] req, int timeoutMs) throws Exception {
+        int[] phys = DiagEngine.address();
+        DiagEngine.readdress(0x7DF, 0x7E8);
+        try {
+            UdsEngineHolder u = holder();
+            UdsLog.log(ctx, "TX", "7DF -> " + UdsClient.hexBytes(req).replace(" ", ""));
+            byte[] resp = u.uds.uds(req, timeoutMs);
+            UdsLog.log(ctx, "RX", "7E8 -> "
+                    + (resp == null ? "—" : UdsClient.hexBytes(resp).replace(" ", "")));
+            return resp;
+        } finally {
+            DiagEngine.readdress(phys[0], phys[1]);
+        }
+    }
+
+    /** Queue a re-address to the Session-selected ECU (called after ECU pick). */
+    public static void retuneToSessionEcu(final Context ctx) {
+        EX.execute(new Runnable() {
+            public void run() {
+                if (DiagEngine.ready()) {
+                    try {
+                        DiagEngine.readdress(Integer.parseInt(Session.ecuTx, 16),
+                                Integer.parseInt(Session.ecuRx, 16));
+                    } catch (Exception ignored) { }
+                }
+                poke();
+            }
+        });
+    }
+
+    // -------------------------------------------------- tester-present keep-alive
+    /** Reference cadence (captured logs): 3E 00 → 7E 00 every ~3.1 s towards
+     *  the currently selected ECU whenever the session is otherwise idle.
+     *  Runs exclusively on EX, so it can never interleave with a bus op, and
+     *  stays silent while operations keep lastOpAt fresh. */
+    private static volatile long lastOpAt = 0L;
+    private static boolean keepAliveRunning = false;
+
+    private static void poke() { lastOpAt = System.currentTimeMillis(); }
+
+    public static void startKeepAlive(final Context ctx) {
+        if (keepAliveRunning) return;
+        keepAliveRunning = true;
+        final Context app = ctx.getApplicationContext();
+        MAIN.postDelayed(new Runnable() {
+            public void run() {
+                if (!keepAliveRunning) return;
+                if (DiagEngine.ready() && System.currentTimeMillis() - lastOpAt > 2800) {
+                    EX.execute(new Runnable() {
+                        public void run() {
+                            if (DiagEngine.ready()
+                                    && System.currentTimeMillis() - lastOpAt >= 2500) {
+                                try {
+                                    UdsLog.log(app, "TX", Session.ecuTx + " -> 3E00");
+                                    holder().uds.testerPresent(false);
+                                    UdsLog.log(app, "RX", Session.ecuRx + " -> 7E00");
+                                } catch (Exception ignored) {
+                                    // reference behavior: log & continue
+                                    // (e.g. 7F 3E 11 on ECUs without 3E support)
+                                }
+                            }
+                            poke();
+                        }
+                    });
+                }
+                MAIN.postDelayed(this, 1000);
+            }
+        }, 3000);
     }
 
     // ------------------------------------------------------------ DTC
@@ -172,7 +249,7 @@ public final class DiagOps {
     public static void obdPid(final Context ctx, final int pid, final Cb<Double> cb) {
         submit(ctx, "Read PID " + Integer.toHexString(pid).toUpperCase(), new Task<Double>() {
             public Double run() throws Exception {
-                byte[] resp = traced(ctx, Obd.requestPid(pid), 2500);
+                byte[] resp = tracedFunctional(ctx, Obd.requestPid(pid), 2500);
                 Double v = Obd.decodePid(pid, resp);
                 if (v == null) throw new Exception("No valid Mode-01 reply for this PID");
                 return v;
@@ -184,7 +261,7 @@ public final class DiagOps {
     public static void mode09(final Context ctx, final int infoType, final Cb<byte[]> cb) {
         submit(ctx, "Read InfoType " + infoType, new Task<byte[]>() {
             public byte[] run() throws Exception {
-                byte[] resp = traced(ctx, Obd.requestInfo(infoType), 4000);
+                byte[] resp = tracedFunctional(ctx, Obd.requestInfo(infoType), 4000);
                 byte[] rec = Obd.decodeInfo(infoType, resp);
                 if (rec == null) throw new Exception("No valid Mode-09 reply");
                 return rec;

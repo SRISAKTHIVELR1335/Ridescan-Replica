@@ -34,6 +34,7 @@ public final class Roles {
     public static final String M_SYSCHECK = "system_check";
     public static final String M_UPDATE = "app_update";
     public static final String M_SCREEN_REC = "screen_record";
+    public static final String M_VIDEOS = "videos";                      // intro/training media
 
     public static final String ROLE_ENGINEER = "Dealer Engineer";
     public static final String ROLE_SERVICE = "Dealer Service";
@@ -41,7 +42,7 @@ public final class Roles {
     /** Dealer Service module set (contract): connect, identify, diagnose. */
     private static final String[] SERVICE = {
         M_VIN_DIAG, M_VEHICLES, M_DIAG_SECTION, M_LIVE, M_DTC, M_IO, M_ROUTINE,
-        M_IUPR, M_VCI,
+        M_IUPR, M_VCI, M_VIDEOS,
     };
 
     /** Technician/Advisor: service set + reports. */
@@ -97,6 +98,7 @@ public final class Roles {
         if ("VciFirmwareListActivity".equals(simpleName)
                 || "FirmwareUpdateActivity".equals(simpleName)) return M_VCI_FW;
         if ("ServiceManualActivity".equals(simpleName)) return M_MANUAL;
+        if ("IntroVideosActivity".equals(simpleName)) return M_VIDEOS;
         if ("LogViewerActivity".equals(simpleName)
                 || "FileViewerActivity".equals(simpleName)) return M_LOGS;
         if ("SupportChatActivity".equals(simpleName)) return M_AI;

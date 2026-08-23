@@ -5,8 +5,14 @@ import android.content.Intent;
 import android.os.Handler;
 import android.os.IBinder;
 
-/** Session screen-record overlay (abort-safe stub):
- *  tracks "recording" state like the original hbRecorder-backed overlay, without MediaProjection. */
+/** Session capture indicator (honest marker service).
+ *
+ *  The reference app ships real video recording (its dex carries
+ *  com.hbisoft.hbrecorder with a persistent overlay bubble).  NirixX does NOT
+ *  fabricate that: this service currently marks the session's active capture
+ *  window so logs can be correlated, and the UI says exactly that.  True
+ *  MediaProjection-based video capture is an open work item — tracked in
+ *  MISSING_DEPENDENCIES.md (consent flow + VirtualDisplay/MediaRecorder). */
 public class ScreenRecordOverlayService extends Service {
     public static boolean recording = false;
     public static long startedAt = 0L;
@@ -22,7 +28,7 @@ public class ScreenRecordOverlayService extends Service {
         startedAt = System.currentTimeMillis();
         new Handler().postDelayed(new Runnable() {
             public void run() {
-                // keep-alive heartbeat for the fake overlay
+                // heartbeat — keeps the capture-window marker alive; renders nothing.
             }
         }, 1000);
         return START_STICKY;

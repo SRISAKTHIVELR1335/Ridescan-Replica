@@ -24,6 +24,7 @@ public final class TestCore {
         testNegativeResponse();
         testNrcTable();
         testObdDecode();
+        testIptDecode();
         testAddrParse();
         testBatteryBands();
         if (failures > 0) { System.out.println("FAILED: " + failures); System.exit(1); }
@@ -51,6 +52,20 @@ public final class TestCore {
         bool(vinRec != null && vinRec.length == 2 && "MD".equals(Obd.asciiInfo(vinRec)),
                 "mode09 VIN record decode");
         ok("OBD-II decode (J1979)");
+    }
+
+    // ---------------------------------------------------------- SAE J1979 IPT (Mode 09 $08)
+    static void testIptDecode() {
+        // with NODI count byte: two monitors → pairs 3/4 and 9/2
+        String s = Obd.decodeIpt(new byte[]{0x02, 0x00, 0x03, 0x00, 0x04, 0x00, 0x09, 0x00, 0x02});
+        bool("M1 3/4  ·  M2 9/2".equals(s), "IPT with count byte → " + s);
+        // without count byte: raw pairs
+        String s2 = Obd.decodeIpt(new byte[]{0x00, 0x0A, 0x00, 0x14});
+        bool("M1 10/20".equals(s2), "IPT without count byte → " + s2);
+        // odd length (not decodable into pairs) → null, never a guess
+        bool(Obd.decodeIpt(new byte[]{0x01, 0x02, 0x03}) == null, "IPT junk rejected");
+        bool(Obd.decodeIpt(null) == null, "IPT null rejected");
+        ok("IUPR IPT decode (J1979 $08)");
     }
 
     // ---------------------------------------------------------- TestAddr grammar

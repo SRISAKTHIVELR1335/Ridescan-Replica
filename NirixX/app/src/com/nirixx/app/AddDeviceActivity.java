@@ -354,6 +354,8 @@ public class AddDeviceActivity extends BaseActivity implements VciManager.ScanCa
                     Session.connectivity = linkType;
                     com.nirixx.app.core.diag.TransportSettings.onConnected(
                             AddDeviceActivity.this, linkType, name);
+                    com.nirixx.app.core.diag.DiagOps.startKeepAlive(
+                            AddDeviceActivity.this);   // 3E 00 cadence, reference-style
                     if (r.vehicle != null) {
                         Ui.resultDialog(AddDeviceActivity.this, R.drawable.ic_flash_success,
                                 "Vehicle identified",

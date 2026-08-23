@@ -10,7 +10,7 @@ public class UpdateDescriptionActivity extends BaseActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_screen);
-        setTitle("What's New in 1.6.1");
+        setTitle("What's New in 1.6.2");
         wireBack();
         LinearLayout content = (LinearLayout) findViewById(R.id.content);
 
@@ -30,13 +30,23 @@ public class UpdateDescriptionActivity extends BaseActivity {
         LinearLayout.LayoutParams hp = new LinearLayout.LayoutParams(-1, -2);
         hp.setMargins(0, 0, 0, Ui.dp(this, 12));
         content.addView(head, hp);
-        head.addView(Ui.tv(this, "NirixX 1.6.1", 18f, 0xFFFFFFFF, true));
-        head.addView(Ui.tv(this, "Honesty pass — every value on every screen is real",
+        head.addView(Ui.tv(this, "NirixX 1.6.2", 18f, 0xFFFFFFFF, true));
+        head.addView(Ui.tv(this, "Reference-alignment pass — bus addressing, keep-alive, VHR validation",
                 12.5f, 0xB3FFFFFF, false));
 
         content.addView(Ui.section(this, "RELEASE NOTES"));
         LinearLayout notes = Ui.card(this);
         String[] items = new String[]{
+            "Per-ECU CAN addressing now re-points the live link (EMS/ABS/cluster ids from the vehicle DB)",
+            "OBD-II Mode 01/09 issued on the 7DF functional lane, exactly like the reference logs",
+            "Tester-present 3E 00 keep-alive at the reference ~3-second cadence while idle",
+            "IUPR now reads Mode 09 $08 IPT records (numerator/denominator pairs, bus order)",
+            "Read DTCs gains the reference All / Active / History filter",
+            "ECU Diagnosis shows the Faults Codes badge from the session's last scan",
+            "VHR Physical Evaluation enforces value+photo per row with the reference red banner",
+            "Intro Videos shelf (import & play your own training clips) added to Home",
+            "Session-capture indicator copy is now explicit: no video is recorded in this build",
+            "VCI serial for the session log is derived from the actual adapter, never a constant",
             "Real UDS/ISO-TP diagnostic stack over BT-SPP, Wi-Fi TCP and USB-CDC VCIs",
             "Real DTC read/clear, live parameters (SAE J1979), IUPR-identifiers and battery voltage",
             "Real flash pipeline (34/36/37) driven by imported binaries; ECU refusals shown with true NRCs",

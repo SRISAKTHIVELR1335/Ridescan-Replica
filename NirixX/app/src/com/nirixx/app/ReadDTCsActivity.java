@@ -20,6 +20,9 @@ public class ReadDTCsActivity extends BaseActivity {
     private LinearLayout content;
     private Db db;
     private TextView read, clear;
+    private UdsClient.DtcRecord[] last;          // cached result of the latest real scan
+    private int filter = 0;                      // 0 All · 1 Active · 2 History
+    private static final String[] FILTERS = { "All", "Active", "History" };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,6 +37,7 @@ public class ReadDTCsActivity extends BaseActivity {
     }
 
     private void render(UdsClient.DtcRecord[] records) {
+        if (records != null) last = records;
         content.removeAllViews();
         content.addView(Ui.crumbs(this, new String[]{"Home", Session.selectedVehicle,
                 Session.selectedEcuCode, "Diagnostic Trouble Codes"}));
@@ -60,11 +64,33 @@ public class ReadDTCsActivity extends BaseActivity {
         ap.setMargins(0, Ui.dp(this, 4), 0, Ui.dp(this, 10));
         content.addView(act, ap);
 
-        if (records == null) {
+        if (last != null && last.length > 0) {
+            // reference-parity filter: All / Active / History (status-byte driven)
+            final TextView dd = Ui.tv(this, FILTERS[filter] + "  ▼", 13.5f, 0xFF14276F, true);
+            dd.setBackgroundResource(R.drawable.bg_box_outline);
+            dd.setGravity(android.view.Gravity.CENTER);
+            LinearLayout.LayoutParams dp = new LinearLayout.LayoutParams(Ui.dp(this, 120), Ui.dp(this, 40));
+            dp.setMargins(0, 0, 0, Ui.dp(this, 8));
+            content.addView(dd, dp);
+            dd.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    new android.app.AlertDialog.Builder(ReadDTCsActivity.this)
+                            .setTitle("DTC filter")
+                            .setItems(FILTERS, new android.content.DialogInterface.OnClickListener() {
+                                public void onClick(android.content.DialogInterface d, int which) {
+                                    filter = which;
+                                    render(null);
+                                }
+                            }).show();
+                }
+            });
+        }
+
+        if (last == null) {
             LinearLayout card = Ui.card(this);
             card.addView(Ui.tv(this, "No DTC query performed yet.", 13.5f, 0xFF5A6472, false));
             content.addView(card);
-        } else if (records.length == 0) {
+        } else if (last.length == 0) {
             LinearLayout card = Ui.card(this);
             LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.HORIZONTAL);
@@ -76,8 +102,12 @@ public class ReadDTCsActivity extends BaseActivity {
                     + Session.selectedEcuCode + ".", 12.5f, 0xFF5A6472, false));
             content.addView(card);
         } else {
-            for (int i = 0; i < records.length; i++) {
-                UdsClient.DtcRecord rec = records[i];
+            int shown = 0;
+            for (int i = 0; i < last.length; i++) {
+                UdsClient.DtcRecord rec = last[i];
+                if (filter == 1 && !rec.active()) continue;          // Active only
+                if (filter == 2 && rec.active()) continue;           // History only
+                shown++;
                 String code = rec.code();
                 String descr = db.dtcDescr(code);
                 if (descr == null) descr = "Description not in the NirixX DTC library";
@@ -103,6 +133,12 @@ public class ReadDTCsActivity extends BaseActivity {
                 lp.setMargins(0, 0, 0, Ui.dp(this, 8));
                 content.addView(card, lp);
                 db.putInput(Session.sessionKey, "dtc", code, rec.active() ? "Active" : "Stored");
+            }
+            if (shown == 0) {
+                LinearLayout card = Ui.card(this);
+                card.addView(Ui.tv(this, "No " + FILTERS[filter] + " entries in the last scan.",
+                        13.5f, 0xFF5A6472, false));
+                content.addView(card);
             }
         }
 

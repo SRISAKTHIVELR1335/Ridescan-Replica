@@ -93,8 +93,36 @@ public class VhrActivity extends BaseActivity {
         lp.setMargins(0, Ui.dp(this, 12), 0, Ui.dp(this, 10));
         host.addView(next, lp);
         next.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { if (tab < TABS.length - 1) { tab++; render(); } }
+            public void onClick(View v) {
+                if (tab == 3 && !physicalComplete()) {
+                    // reference behavior: blocking red validation bar
+                    Ui.errorBar(VhrActivity.this,
+                            "Please fill & upload picture of all the fields");
+                    return;
+                }
+                if (tab < TABS.length - 1) { tab++; render(); }
+            }
         });
+    }
+
+    /** PHYSICAL EVALUATION is a legal-grade checklist: every row needs its
+     *  measured value/quality pick AND an attached photo before continuing —
+     *  same requirement the reference app enforces with its red snackbar. */
+    private boolean physicalComplete() {
+        java.util.List<String[]> items = db.vhrItems(Session.vehicleId);
+        for (String[] it : items) {
+            String name = it[0], kind = it[4];
+            Object photo = Session.vhrData.get("photo|" + name);
+            boolean hasPhoto = photo != null && String.valueOf(photo).length() > 0;
+            if ("PHOTO".equals(kind)) {
+                if (!hasPhoto) return false;
+            } else {
+                Object val = Session.vhrData.get("phys|" + name);
+                if (val == null || String.valueOf(val).trim().length() == 0) return false;
+                if (!hasPhoto) return false;
+            }
+        }
+        return true;
     }
 
     // ---------------------------------------------------------------- DEALER
