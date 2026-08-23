@@ -2,6 +2,12 @@
 
 > **Beyond Diagnostics.**
 
+> 📚 **Deep reference analysis:** the complete evidence-driven study of the reference
+> application (protocol logs, video, PDF, package tree) and its NirixX mapping lives in
+> [`docs/analysis/`](docs/analysis/README.md) — 21 documents covering functional spec,
+> screen map, roles, VCI & vehicle communication, per-feature protocol specs, VHR, flashing,
+> logging/recording, state machines, implementation matrix, and test strategy.
+
 NirixX is a complete, standalone Android dealer-diagnostics application built inside this
 repository: a full workflow implementation inspired by the reference tool analyzed in the
 repo-root documentation (PRD, architecture, wireframes, project structure, roadmap) — shipped
