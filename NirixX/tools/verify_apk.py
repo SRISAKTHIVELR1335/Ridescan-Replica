@@ -173,6 +173,19 @@ try:
     missing = [m for m in must if m not in classes]
     if missing: err('declared classes missing from dex: ' + ', '.join(missing))
     else: ok('all %d declared activities/services/Application present in dex' % len(must))
+
+    # every top-level class named by an app source file must be DEFINED in the
+    # dex — this is the gate that catches a compiler silently dropping a class
+    # (once shipped a dex with no Ui.class at all: every screen crashed).
+    src_missing = []
+    for dp, _dn, fns in os.walk(os.path.join(ROOT, 'app', 'src')):
+        for fn in fns:
+            if not fn.endswith('.java'): continue
+            rel = os.path.relpath(os.path.join(dp, fn), os.path.join(ROOT, 'app', 'src'))
+            cls = rel[:-5].replace(os.sep, '.')
+            if cls not in classes: src_missing.append(cls)
+    if src_missing: err('source classes missing from dex: ' + ', '.join(sorted(src_missing)))
+    else: ok('every app source class is defined in the dex')
 except Exception as e:
     err('dex parse failed: %r' % e)
 

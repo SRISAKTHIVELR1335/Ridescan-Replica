@@ -39,7 +39,7 @@ public final class UdsLog {
             line(c, "INFO", "Android            : " + Build.VERSION.RELEASE);
             line(c, "INFO", "Android SDK        : " + Build.VERSION.SDK_INT);
             line(c, "INFO", "App Name           : NirixX");
-            line(c, "INFO", "App Version        : 1.6.2 (13)");
+            line(c, "INFO", "App Version        : 1.6.3 (14)");
             line(c, "INFO", "Domain             : DMS");
             line(c, "INFO", "Dealer Name        : " + Session.dealerName);
             line(c, "INFO", "Dealer Code        : " + Session.dealerCode);

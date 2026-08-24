@@ -10,7 +10,7 @@ public class UpdateDescriptionActivity extends BaseActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_screen);
-        setTitle("What's New in 1.6.2");
+        setTitle("What's New in 1.6.3");
         wireBack();
         LinearLayout content = (LinearLayout) findViewById(R.id.content);
 
@@ -30,13 +30,20 @@ public class UpdateDescriptionActivity extends BaseActivity {
         LinearLayout.LayoutParams hp = new LinearLayout.LayoutParams(-1, -2);
         hp.setMargins(0, 0, 0, Ui.dp(this, 12));
         content.addView(head, hp);
-        head.addView(Ui.tv(this, "NirixX 1.6.2", 18f, 0xFFFFFFFF, true));
-        head.addView(Ui.tv(this, "Reference-alignment pass — bus addressing, keep-alive, VHR validation",
+        head.addView(Ui.tv(this, "NirixX 1.6.3", 18f, 0xFFFFFFFF, true));
+        head.addView(Ui.tv(this, "Launch hardening — crash-proof startup, self-diagnosing launch watchdog",
                 12.5f, 0xB3FFFFFF, false));
 
         content.addView(Ui.section(this, "RELEASE NOTES"));
         LinearLayout notes = Ui.card(this);
         String[] items = new String[]{
+            "Fixed a startup failure seen on some Android 12+ phones: the app died before the first "
+                    + "screen (white flash, then closed). The process-birth service start that could be "
+                    + "rejected by the OS is gone, the crash reporter is now installed before anything "
+                    + "else runs, and the first frame itself is guarded",
+            "New launch watchdog: if Android (Play Protect / battery optimiser / device security) ends "
+                    + "the app before any screen, the next launch says exactly that — with the steps to "
+                    + "whitelist NirixX — instead of silently failing",
             "Per-ECU CAN addressing now re-points the live link (EMS/ABS/cluster ids from the vehicle DB)",
             "OBD-II Mode 01/09 issued on the 7DF functional lane, exactly like the reference logs",
             "Tester-present 3E 00 keep-alive at the reference ~3-second cadence while idle",

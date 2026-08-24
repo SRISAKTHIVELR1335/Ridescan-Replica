@@ -58,7 +58,7 @@ public class ECUDiagnosisActivity extends BaseActivity {
         m.setMargins(0, 0, 0, Ui.dp(this, 8));
         tiles.addView(b, new LinearLayout.LayoutParams(m));
         LinearLayout upd = Ui.statTile(this, R.drawable.ic_refresh, "App Version",
-                "Installed " + com.nirixx.app.db.Db.get(this).config("app_version", "V 1.6.2"));
+                "Installed " + com.nirixx.app.db.Db.get(this).config("app_version", "V 1.6.3"));
         tiles.addView(upd, new LinearLayout.LayoutParams(m));
         top.addView(tiles, new LinearLayout.LayoutParams(0, -2, 1f));
         content.addView(top);

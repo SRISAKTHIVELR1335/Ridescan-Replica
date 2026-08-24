@@ -303,10 +303,10 @@ public final class Ui {
         FrameLayout.LayoutParams fp = new FrameLayout.LayoutParams(-1, -2);
         fp.gravity = android.view.Gravity.BOTTOM;
         fp.setMargins(dp(a, 12), 0, dp(a, 12), dp(a, 88));
-        View overlay = new FrameLayout(a);
+        final FrameLayout overlay = new FrameLayout(a);
         overlay.setClickable(false);
-        ((FrameLayout) overlay).addView(bar, fp);
-        android.view.ViewGroup decor = (android.view.ViewGroup) root.getChildAt(0);
+        overlay.addView(bar, fp);
+        final android.view.ViewGroup decor = (android.view.ViewGroup) root.getChildAt(0);
         decor.addView(overlay, new android.view.ViewGroup.LayoutParams(-1, -1));
         bar.postDelayed(new Runnable() {
             public void run() { decor.removeView(overlay); }

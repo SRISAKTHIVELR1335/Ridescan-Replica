@@ -8,8 +8,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-VCODE=13
-VNAME="1.6.2"
+VCODE=14
+VNAME="1.6.3"
 
 # ---------------------------------------------------------------- toolchain
 detect() {
@@ -76,12 +76,25 @@ if [ "$COMPILER" = javac ]; then
     -d "$OUT/classes" @"$OUT/sources.txt" 2> "$OUT/build.log" || { cat "$OUT/build.log"; exit 1; }
   grep -v "^warning:" "$OUT/build.log" | head -5 || true
 else
+  # ECJ keeps going after errors and simply DROPS the offending class files —
+  # a previous build silently shipped without Ui.class because this output was
+  # never checked.  Capture it and refuse to package on any ERROR.
   "$JAVA_BIN" -cp "$ECJ_JAR" org.eclipse.jdt.internal.compiler.batch.Main -1.7 -nowarn -proc:none \
     -bootclasspath "$ANDROID_JAR" -classpath "$ANDROID_JAR" \
-    -d "$OUT/classes" @"$OUT/sources.txt" || true
-  if grep -q ERROR "$OUT/build.log" 2>/dev/null; then cat "$OUT/build.log"; exit 1; fi
+    -d "$OUT/classes" @"$OUT/sources.txt" > "$OUT/build.log" 2>&1 || true
+  if grep -q "ERROR" "$OUT/build.log"; then
+    cat "$OUT/build.log"
+    echo "!! compile FAILED — ECJ dropped classes; refusing to package a broken dex"
+    exit 1
+  fi
 fi
 echo "   classes: $(find "$OUT/classes" -name '*.class' | wc -l)"
+# belt-and-braces: classes that must always exist after a healthy compile
+for K in com/nirixx/app/Ui.class com/nirixx/app/NirixXApp.class \
+         com/nirixx/app/SplashActivity.class com/nirixx/app/HomeActivity.class \
+         com/nirixx/app/R.class; do
+  [ -f "$OUT/classes/$K" ] || { echo "!! missing $K after compile — aborting"; exit 1; }
+done
 
 # ---------------------------------------------------------------- dex
 echo "== [4/6] dex =="

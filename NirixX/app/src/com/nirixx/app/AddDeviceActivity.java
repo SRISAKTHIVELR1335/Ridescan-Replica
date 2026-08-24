@@ -352,6 +352,14 @@ public class AddDeviceActivity extends BaseActivity implements VciManager.ScanCa
                 if (r.ok) {
                     Session.vciConnected = true;
                     Session.connectivity = linkType;
+                    // Task-removal cleanup hook, started only now that a real link
+                    // exists (and from a user-visible screen, so Android 12+ OEM
+                    // background-start edge paths can never reject it at process
+                    // birth — that used to kill the app before the first frame).
+                    try {
+                        startService(new android.content.Intent(AddDeviceActivity.this,
+                                AppCloseService.class));
+                    } catch (Exception ignored) { }
                     com.nirixx.app.core.diag.TransportSettings.onConnected(
                             AddDeviceActivity.this, linkType, name);
                     com.nirixx.app.core.diag.DiagOps.startKeepAlive(

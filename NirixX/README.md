@@ -38,7 +38,7 @@ extra byte is real, on-screen content)
 |---|---|
 | Package | `com.nirixx.app` |
 | Label / tagline | **NirixX** · "Beyond Diagnostics" |
-| Version | `1.6.2` (versionCode 13) |
+| Version | `1.6.3` (versionCode 14) |
 | SDK window | **minSdk 24 (Android 7.0) → targetSdk 34 (Android 14)** |
 | Signature | own NirixX keystore, **APK Signature Scheme v2 + v3** |
 | Architecture | universal (pure Java, no native libs → all ABIs) |
@@ -305,6 +305,37 @@ The repo root holds the complete reverse-engineering analysis of the reference d
   Dealer Information, File Viewer, System Monitoring, Physical Evaluation, Data Watcher) had
   no incoming navigation. Home's dealer footer now opens the Account screen; all 49 screens
   are reachable from the launcher. Version labels corrected to the honest NirixX numbering.
+
+### Phase 6.5 — Launch forensics: white-screen-then-close root-caused & fixed (v1.6.3, **current**)
+User report: on the phone the app showed only a white screen, then closed itself — every time,
+with no error dialog. Two independent causes were found and fixed:
+
+1. **The shipped v1.6.2 DEX was structurally broken (root cause).** `Ui.errorBar` captured two
+   non-`final` locals — legal Java 8 "effectively final" but an **error at the app's ECJ `-1.7`
+   source level**. ECJ reports the error yet keeps going, **silently dropping the whole
+   `Ui.java` unit** (all 6 classes), and `build.sh` never checked ECJ's output. The packaged
+   `classes.dex` therefore referenced `Lcom/nirixx/app/Ui;` without defining it — so every
+   screen built with Ui helpers died with `NoClassDefFoundError`, including the crash-report
+   dialog itself (a white flash, then an endless silent loop). Verified byte-level with
+   androguard against the published v1.6.2 APK: **old dex has no `Ui.class`; the new one
+   defines `Ui` + `Ui$1..5`.** Fixes: `Ui.errorBar` now captures `final` variables;
+   `build.sh` aborts on any ECJ `ERROR` and asserts critical classes were emitted;
+   `verify_apk.py` gained a gate proving **every app source class is defined in the dex**
+   (this exact failure mode is now impossible to ship again).
+2. **A policy-sensitive call at process birth (hardening).** `NirixXApp.onCreate()` started
+   `AppCloseService` with `startService()` *before* installing the crash handler — on
+   Android 12+ OEM edge paths (installer "Open", recents re-launch on MIUI/ColorOS/Funtouch)
+   that can throw and kill the process before the first frame, with zero captured evidence.
+   The handler is now installed first, no system calls remain in `Application.onCreate`, and
+   `AppCloseService` starts when a VCI actually connects (the only moment its task-removal
+   cleanup matters). `SplashActivity` additionally guards its own first frame: if inflation
+   ever fails, the trace is recorded *and* shown on a raw view instead of a silent white
+   screen; and a new **launch watchdog** detects "died before any UI with no Java trace" —
+   i.e. an OS/Play-Protect/OEM kill — and tells the user exactly how to whitelist the app
+   instead of failing silently.
+
+Gates after the fix: JVM tests 9/9 · `verify_apk.py` 21/21 (now 367 dex classes) ·
+`audit_links.py` 0/0.
 
 ---
 
